@@ -12,10 +12,9 @@ The file contains the following:
 PORT = 1001
 
 \# --- Dev ---  
-NODE_ENV = production
+NODE_ENV = production    
 
 ## Commands
-
 
 ### npm
 
