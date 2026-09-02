@@ -21,26 +21,26 @@ export const signup = async (req, res) => {
             return res.status(STATUS_CODES.ERROR.WEB_BAD_REQUEST).json({ message: "Username length must be three (3) or more" });
         }
 
-        if (password.length < 8) {
-            return res.status(STATUS_CODES.ERROR.WEB_BAD_REQUEST).json({ message: "Password length must be eight (8) or more" });
-        }
-
         const emailRegex = process.env.EMAIL_REGEX;
         if (!emailRegex.test(email)) {
             return res.status(STATUS_CODES.ERROR.WEB_BAD_REQUEST).json( {message: "Invalid email format"});
         }
 
-        const passwordRegex = process.env.PASSWORD_REGEX;
-        if (!passwordRegex.test(password)) {
+        if (password.length < 8) {
             return res.status(STATUS_CODES.ERROR.WEB_BAD_REQUEST).json({ message: "Password length must be eight (8) or more" });
         }
 
-        const userName = await mod_user.findOne({ username: username.toLowerCase()});
+        const passwordRegex = process.env.PASSWORD_REGEX;
+        if (!passwordRegex.test(password)) {
+            return res.status(STATUS_CODES.ERROR.WEB_BAD_REQUEST).json({ message: "The password needs to contain at least one (1) lowercase and one (1) uppercase letter, one (1) number and one (1) special character" });
+        }
+        
+        const userName = await mod_user.findOne({ username: username.toLowerCase() });
         if (userName) {
             return res.status(STATUS_CODES.ERROR.WEB_BAD_REQUEST).json({ message: "The username is already taken"});
         }
 
-        const userEmail = await mod_user.findOne({ email: email});
+        const userEmail = await mod_user.findOne({ email: email.toLowerCase() });
         if (userEmail) {
             return res.status(STATUS_CODES.ERROR.WEB_BAD_REQUEST).json({ message: "A user with this email already exists"});
         }
@@ -50,7 +50,7 @@ export const signup = async (req, res) => {
         const newUser = new mod_user({
             display_name: display_name,
             username: username.toLowerCase(),
-            email: email,
+            email: email.toLowerCase(),
             password: hashedPassword
         });
 
@@ -61,7 +61,7 @@ export const signup = async (req, res) => {
             res.status(STATUS_CODES.INFO.WEB_CREATED).json({
                 _id: newUser._id,
                 display_name: newUser.display_name,
-                username: username.toLowerCase(),
+                username: username,
                 email: newUser.email,
                 profilePic: newUser.profile_picture
             })
