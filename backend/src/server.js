@@ -32,7 +32,8 @@ if (process.env.NODE_ENV === "production") {
     });
 }
 
-app.listen(1001, () => {
-    console.log("Server listening on port 1001");
-    connectDB();
-});
+connectDB().then(() => {
+                app.listen(1001, () => {
+                    console.log("Server listening on port 1001");
+                });
+            });

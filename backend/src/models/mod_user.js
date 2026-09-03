@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
 {
-    display_name:{
+    displayName:{
         type: String,
         required: true,
         unique: false
@@ -23,7 +23,7 @@ const userSchema = new mongoose.Schema(
         unique: false,
         minlength: 6
     },
-    profile_picture:{
+    profilePicture:{
         type: String,
         default: ""
     },
