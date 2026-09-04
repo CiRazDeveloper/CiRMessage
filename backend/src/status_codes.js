@@ -4,7 +4,9 @@ export const STATUS_CODES = {
         SERVER_INTERNAL_ERROR: 500,
 
         // Web
-        WEB_BAD_REQUEST: 400
+        WEB_BAD_REQUEST: 400,
+        WEB_UNAUTHORIZED: 401,
+        WEB_NOT_FOUND: 404,
     },
 
     INFO: {

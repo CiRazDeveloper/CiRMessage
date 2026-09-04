@@ -1,9 +1,9 @@
 import "dotenv/config";
-import mod_user from "../models/mod_user.js";
+import mod_user from "../../models/mod_user.js";
 
-import { generateToken } from "../ultilities/utils.js";
-import { verifyPassword } from "../ultilities/pass_hash.js";
-import { STATUS_CODES } from "../status_codes.js";
+import { generateToken } from "../../ultilities/utils.js";
+import { verifyPassword } from "../../ultilities/pass_hash.js";
+import { STATUS_CODES } from "../../status_codes.js";
 
 
 export const login = async (req, res) => {
@@ -16,9 +16,6 @@ export const login = async (req, res) => {
                 { username }
             ]
         });
-
-        console.log("USER:", user);
-
 
         const userError = checkUser(user);
         if (userError) {

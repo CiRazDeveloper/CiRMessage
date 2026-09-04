@@ -1,9 +1,11 @@
+import cookieParser from "cookie-parser"
 import dotenv from "dotenv";
 import express from "express";
 import path from "path";
 
 import { connectDB } from "./lib/db.js"
 import routesAuth from "./routes/auth.js";
+import routesMedia from "./routes/media.js";
 import routesMessages from "./routes/messages.js";
 
 
@@ -12,15 +14,18 @@ import routesMessages from "./routes/messages.js";
 dotenv.config();
 const app = express();
 const __dirname = path.resolve();
-app.use(express.json());
+app.use(express.json()); // req.body
+app.use(cookieParser());
+app.use(express.urlencoded({ extended: true }));
 
 
 // --- VARIABLES ---
-const PORT = process.env.PORT;
+const PORT = Number(process.env.PORT);
 
 
 // --- GET METHODS ---
 app.use("/api/auth", routesAuth);
+app.use("/api/media", routesMedia);
 app.use("/api/messages", routesMessages);
 
 // --- MAKE READY FOR DEPLOYMENT ---
@@ -33,7 +38,7 @@ if (process.env.NODE_ENV === "production") {
 }
 
 connectDB().then(() => {
-                app.listen(1001, () => {
-                    console.log("Server listening on port 1001");
+                app.listen(PORT, () => {
+                    console.log(`Server listening on port ${PORT}`);
                 });
             });
