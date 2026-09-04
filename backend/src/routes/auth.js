@@ -1,5 +1,7 @@
 import express from "express";
 import { signup } from "../controllers/signup_controller.js";
+import { login } from "../controllers/login_controller.js";
+import { logout } from "../controllers/logout_controller.js";
 
 // --- CONFIGURATIONS ---
 const router = express.Router();
@@ -7,12 +9,8 @@ const router = express.Router();
 // --- GET METHODS ---
 router.post("/signup", signup);
 
-router.get("/login", (req, res) => {
-    res.send("Login endpoint");
-});
+router.post("/login", login);
 
-router.get("/logout", (req, res) => {
-    res.send("Logout endpoint");
-});
+router.post("/logout", logout);
 
 export default router;

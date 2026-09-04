@@ -9,6 +9,7 @@ export const STATUS_CODES = {
 
     INFO: {
         // Web
-        WEB_CREATED: 201
+        WEB_OK: 200,
+        WEB_CREATED: 201,
     }
 };
