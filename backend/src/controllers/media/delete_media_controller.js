@@ -73,7 +73,7 @@ export const deleteMedia = async (req, res) => {
             {
                 returnDocument: "after",
             }
-        );
+        ).select("-password");
 
 
         // ----------------------------------------

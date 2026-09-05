@@ -182,7 +182,7 @@ export const postMedia = async (req, res) => {
             {
                 returnDocument: "after"
             }
-        );
+        ).select("-password");
 
 
         // ----------------------------------------
