@@ -5,7 +5,8 @@ import path from "path";
 
 import { connectDB } from "./lib/db.js"
 import routesAuth from "./routes/auth.js";
-import routesMedia from "./routes/media.js";
+import profileRoutes from "./routes/profile.js";
+import mediaRoutes from "./routes/media.js";
 import routesMessages from "./routes/messages.js";
 
 
@@ -25,7 +26,8 @@ const PORT = Number(process.env.PORT);
 
 // --- GET METHODS ---
 app.use("/api/auth", routesAuth);
-app.use("/api/media", routesMedia);
+app.use("/api/profile", profileRoutes);
+app.use("/api/media", mediaRoutes);
 app.use("/api/messages", routesMessages);
 
 // --- MAKE READY FOR DEPLOYMENT ---
