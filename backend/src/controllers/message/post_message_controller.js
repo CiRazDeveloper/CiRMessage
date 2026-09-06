@@ -21,6 +21,12 @@ export const sendMessage = async (req, res) => {
         const { id: receiverId } = req.params;
         const senderId = req.user._id;
 
+        if (typeof text === "string" && text.length > 2000) {
+            return res
+                .status(STATUS_CODES.ERROR.WEB_BAD_REQUEST)
+                .json({ message: "Text must not exceed 2000 characters" });
+        }
+
         let imageKey;
 
         if (req.file) {
