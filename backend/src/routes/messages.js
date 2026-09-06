@@ -9,15 +9,12 @@ import { sendMessage } from "../controllers/message/post_message_controller.js";
 
 const router = express.Router();
 
-router.get("/contacts", protectRoute, getAllContacts);
-router.get("/chats", protectRoute, getActiveChats);
-router.get("/:id", protectRoute, getMessagesByUserId);
+router.use(protectRoute);
 
-router.post(
-    "/send/:id",
-    protectRoute,
-    upload.single("image"),
-    sendMessage
-);
+router.get("/contacts", getAllContacts);
+router.get("/chats", getActiveChats);
+router.get("/:id", getMessagesByUserId);
+
+router.post("/send/:id", upload.single("image"), sendMessage);
 
 export default router;

@@ -4,6 +4,7 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 
 import mod_message from "../../models/mod_message.js";
 import minioClient from "../../lib/minio.js";
+import mod_user from "../../models/mod_user.js";
 import { STATUS_CODES } from "../../status_codes.js";
 
 const extensionMap = {
@@ -31,7 +32,29 @@ export const sendMessage = async (req, res) => {
                     .json({ message: "Unsupported image type" });
             }
 
-            imageKey = `messages/${crypto.randomUUID()}.${extension}`;
+            const sender = await mod_user
+                .findById(req.user._id)
+                .select("username");
+
+            const receiver = await mod_user
+                .findById(receiverId)
+                .select("username");
+
+            if (!sender || !receiver) {
+                return res
+                    .status(STATUS_CODES.ERROR.WEB_NOT_FOUND)
+                    .json({ message: "User not found" });
+            }
+
+            const safeUsername = sender.username.replace(/[^a-zA-Z0-9_-]/g, "_");
+
+            const safeReceiverUsername = receiver.username.replace(
+                /[^a-zA-Z0-9_-]/g,
+                "_"
+            );
+
+            imageKey = `users/${safeUsername}/messages/${safeReceiverUsername}/` +
+                `${crypto.randomUUID()}.${extension}`;
 
             await minioClient.send(
                 new PutObjectCommand({
