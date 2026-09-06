@@ -1,0 +1,128 @@
+@import "./input-wrapper.css";
+@import "./toggle_input_visibility.css";
+
+:root {
+    /* ==============================
+       PRIVATE
+       ============================== */
+
+    --private-width: 500px;
+    --private-gap: 20px;
+    --private-font-family: Arial, Helvetica, sans-serif;
+    --private-padding: 20px;
+    --private-border-radius: 7px;
+
+    /* Headings */
+    --h1-font-size: 44px;
+}
+
+
+/* ==============================
+   AUTH
+   ============================== */
+
+.auth-container {
+    background-color: var(--background-color);
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    min-height: 100vh;
+
+    color: var(--text-color);
+}
+
+.auth-container form {
+    width: var(--private-width);
+    max-width: 100%;
+
+    padding: 0 var(--private-padding);
+}
+
+.auth-container h1 {
+    width: 100%;
+
+    margin: 0;
+
+    color: var(--primary-color);
+
+    font-size: var(--h1-font-size);
+    text-align: center;
+}
+
+.auth-inputs {
+    display: flex;
+    flex-direction: column;
+
+    width: var(--private-width);
+    max-width: 100%;
+
+    padding: var(--private-padding) 0;
+
+    gap: var(--private-gap);
+}
+
+.auth-button {
+    width: 100%;
+    height: 50px;
+
+    padding: 0 var(--private-padding);
+
+    background-color: var(--button-background);
+    color: var(--button-text);
+
+    border: 1px solid var(--input-border);
+    border-radius: var(--private-border-radius);
+
+    font-family: var(--private-font-family);
+    font-size: 20px;
+    font-weight: bold;
+
+    cursor: pointer;
+}
+
+.auth-button:hover {
+    opacity: 0.9;
+}
+
+.redirect-links a,
+.redirect-links a:visited {
+    color: var(--link-color);
+    font-weight: 700;
+}
+
+.redirect-links a:hover {
+    color: #88b8ff;
+}
+
+.redirect-links a:active {
+    color: var(--link-color);
+}
+
+
+
+/* ==============================
+   MOBILE
+   ============================== */
+
+@media (max-width: 600px) {
+
+    .auth-container {
+        padding: 5px;
+    }
+
+    .auth-container h1 {
+        font-size: 36px;
+    }
+
+    .auth-inputs {
+        width: 100%;
+    }
+
+    .redirect-links {
+        width: 100%;
+        font-size: 16px;
+    }
+}

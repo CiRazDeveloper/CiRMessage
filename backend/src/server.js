@@ -2,6 +2,7 @@ import cookieParser from "cookie-parser"
 import dotenv from "dotenv";
 import express from "express";
 import path from "path";
+import cors from "cors";
 
 import { connectDB } from "./lib/db.js"
 import routesAuth from "./routes/auth.js";
@@ -18,6 +19,7 @@ const __dirname = path.resolve();
 app.use(express.json()); // req.body
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
+app.use(cors({ origin:process.env.CLIENT_URL, credentials: true }));
 
 
 // --- VARIABLES ---
@@ -40,7 +42,7 @@ if (process.env.NODE_ENV === "production") {
 }
 
 connectDB().then(() => {
-                app.listen(PORT, () => {
-                    console.log(`Server listening on port ${PORT}`);
-                });
-            });
+    app.listen(PORT, "0.0.0.0", () => {
+        console.log(`Server listening on port ${PORT}`);
+    });
+});

@@ -7,13 +7,13 @@ import { STATUS_CODES } from "../../status_codes.js";
 
 
 export const login = async (req, res) => {
-    let { username, email, password } = req.body;
+    let { identifier, password } = req.body;
 
     try {
         const user = await mod_user.findOne({
             $or: [
-                { email },
-                { username }
+                { email: identifier },
+                { username: identifier }
             ]
         });
 
