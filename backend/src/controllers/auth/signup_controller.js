@@ -1,8 +1,9 @@
 import "dotenv/config";
 import mod_user from "../../models/mod_user.js";
 
+import { encryptEmail } from "../../ultilities/crypt.js";
 import { generateToken } from "../../ultilities/utils.js";
-import { hashPassword } from "../../ultilities/pass_hash.js";
+import { hashPassword } from "../../ultilities/hash.js";
 import { STATUS_CODES } from "../../status_codes.js";
 
 export const signup = async (req, res) => {
@@ -39,11 +40,19 @@ export const signup = async (req, res) => {
         }
 
         // Validate email
-        const emailError = await checkEmail(email);
+        const emailError = await checkEmailGrammar(email);
         if (emailError) {
             return res
                 .status(STATUS_CODES.ERROR.WEB_BAD_REQUEST)
                 .json({ message: emailError });
+        }
+
+        const encryptedEmail = await encryptEmail(email);
+        const findEmailError = await checkEmail(encryptedEmail);
+        if (findEmailError) {
+            return res
+                .status(STATUS_CODES.ERROR.WEB_BAD_REQUEST)
+                .json({ message: findEmailError });
         }
 
         // Validate password
@@ -54,14 +63,14 @@ export const signup = async (req, res) => {
                 .json({ message: passwordError });
         }
 
-        // Hash password
+        // Hashes
         const hashedPassword = await hashPassword(password);
 
         // Create user
         const newUser = new mod_user({
-            displayName,
-            username,
-            email,
+            displayName: displayName,
+            username: username,
+            email: encryptedEmail,
             password: hashedPassword,
             profilePicture: ""
         });
@@ -77,7 +86,6 @@ export const signup = async (req, res) => {
                 _id: newUser._id,
                 displayName: newUser.displayName,
                 username: newUser.username,
-                email: newUser.email,
                 profilePicture: newUser.profilePicture
             });
 
@@ -117,7 +125,7 @@ async function checkUsername(username) {
 }
 
 
-async function checkEmail(email) {
+async function checkEmailGrammar(email) {
     // Environment variables are strings, so convert to RegExp
     const emailRegex = new RegExp(process.env.EMAIL_REGEX);
 
@@ -125,9 +133,11 @@ async function checkEmail(email) {
         return "Invalid email format";
     }
 
-    const userEmail = await mod_user.findOne({
-        email: email.toLowerCase()
-    });
+    return null;
+}
+
+async function checkEmail(email) {
+    const userEmail = await mod_user.findOne({ email: email });
 
     if (userEmail) {
         return "A user with this email already exists";

@@ -1,21 +1,43 @@
 import "dotenv/config";
 import mod_user from "../../models/mod_user.js";
 
+import { decryptEmail } from "../../ultilities/crypt.js";
 import { generateToken } from "../../ultilities/utils.js";
-import { verifyPassword } from "../../ultilities/pass_hash.js";
+import { verifyPassword } from "../../ultilities/hash.js";
 import { STATUS_CODES } from "../../status_codes.js";
-
 
 export const login = async (req, res) => {
     let { identifier, password } = req.body;
 
     try {
-        const user = await mod_user.findOne({
-            $or: [
-                { email: identifier },
-                { username: identifier }
-            ]
+        if (!identifier || !password) {
+            return res
+                .status(STATUS_CODES.ERROR.WEB_BAD_REQUEST)
+                .json({ message: "All fields must be filled out" });
+        }
+
+        identifier = identifier.trim().toLowerCase();
+
+        let user;
+
+        // Username
+        user = await mod_user.findOne({
+            username: identifier
         });
+
+        // Email
+        if (!user) {
+            const users = await mod_user.find({});
+
+            for (const possibleUser of users) {
+                const email = await decryptEmail(possibleUser.email);
+
+                if (email === identifier) {
+                    user = possibleUser;
+                    break;
+                }
+            }
+        }
 
         const userError = checkUser(user);
         if (userError) {
@@ -33,21 +55,21 @@ export const login = async (req, res) => {
 
         generateToken(user._id, res);
 
-        res.status(STATUS_CODES.INFO.WEB_OK).json({
+        return res.status(STATUS_CODES.INFO.WEB_OK).json({
             _id: user._id,
             displayName: user.displayName,
             username: user.username,
-            email: user.email,
             profilePicture: user.profilePicture,
         });
 
     } catch (error) {
-        console.error("Error in login controller: ", error);
+        console.error("Error in login controller:", error);
+
         return res
             .status(STATUS_CODES.ERROR.SERVER_INTERNAL_ERROR)
             .json({ message: "Internal server error" });
     }
-}
+};
 
 function checkUser(user) {
     if (!user) {

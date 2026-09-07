@@ -1,4 +1,4 @@
-@import "./input-wrapper.css";
+@import "./input_wrapper.css";
 @import "./toggle_input_visibility.css";
 
 :root {
@@ -6,14 +6,13 @@
        PRIVATE
        ============================== */
 
-    --private-width: 500px;
     --private-gap: 20px;
     --private-font-family: Arial, Helvetica, sans-serif;
     --private-padding: 20px;
     --private-border-radius: 7px;
 
     /* Headings */
-    --h1-font-size: 44px;
+    --h1-font-size: 54px;
 }
 
 
@@ -21,29 +20,27 @@
    AUTH
    ============================== */
 
-.auth-container {
-    background-color: var(--background-color);
-
+.login-page {
     display: flex;
-    flex-direction: column;
     justify-content: center;
     align-items: center;
 
     min-height: 100vh;
 
-    color: var(--text-color);
-}
-
-.auth-container form {
-    width: var(--private-width);
-    max-width: 100%;
-
     padding: 0 var(--private-padding);
 }
 
-.auth-container h1 {
-    width: 100%;
+.login-container {
+    background-color: var(--background-color);
+    color: var(--text-color);
+    
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
 
+.login-container h1 {
     margin: 0;
 
     color: var(--primary-color);
@@ -52,19 +49,18 @@
     text-align: center;
 }
 
-.auth-inputs {
+.login-inputs {
     display: flex;
     flex-direction: column;
 
-    width: var(--private-width);
-    max-width: 100%;
+    width: 100%;
 
     padding: var(--private-padding) 0;
 
     gap: var(--private-gap);
 }
 
-.auth-button {
+.login-button {
     width: 100%;
     height: 50px;
 
@@ -83,8 +79,24 @@
     cursor: pointer;
 }
 
-.auth-button:hover {
+.login-button:hover {
     opacity: 0.9;
+}
+
+.redirect-links {
+    width: 100%;
+
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+
+    padding: var(--private-padding) 0;
+
+    gap: var(--private-gap);
+}
+
+.redirect-links p {
+    margin: 0;
 }
 
 .redirect-links a,
@@ -109,20 +121,21 @@
 
 @media (max-width: 600px) {
 
-    .auth-container {
+    .login-container {
         padding: 5px;
     }
 
-    .auth-container h1 {
-        font-size: 36px;
+    .login-container h1 {
+        font-size: 39px;
     }
 
-    .auth-inputs {
+    .login-inputs {
         width: 100%;
     }
+}
 
-    .redirect-links {
-        width: 100%;
-        font-size: 16px;
+@media (min-width: 359px) and (max-width: 599px) {
+    .login-container h1 {
+        font-size: 38px;
     }
 }

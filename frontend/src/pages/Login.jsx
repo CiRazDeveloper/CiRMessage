@@ -1,4 +1,4 @@
-import "../styles/auth.css";
+import "../styles/login.css";
 
 import { axiosInstance } from "../lib/axios.js";
 import { useState } from "react";
@@ -36,12 +36,11 @@ function Login() {
     }
 
     return (
-        <div className="auth-container">
-            <h1>CiRMessage - Login</h1>
+        <div className="login-page">
+            <div className="login-container">
+                <h1>CiRMessage - Login</h1>
 
-            <form onSubmit={handleLogin}>
-                <div className="auth-inputs">
-
+                <div className="login-inputs">
                     <div className="input-wrapper">
                         <input
                             type="text"
@@ -68,7 +67,9 @@ function Login() {
                     </div>
                 </div>
 
-                <button className="auth-button" type="submit">Login</button>
+                <button className="login-button" onClick={handleLogin}>
+                    Login
+                </button>
 
                 <div className="redirect-links">
                     <p>
@@ -81,7 +82,7 @@ function Login() {
                         <Link to="/reset_password">Reset password</Link>
                     </p>
                 </div>
-            </form>
+            </div>
         </div>
     );
 }

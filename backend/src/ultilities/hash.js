@@ -4,8 +4,8 @@ import { promisify } from "util";
 
 const scrypt = promisify(crypto.scrypt);
 
-const SALT_LENGTH = Number(process.env.SALT_LENGTH);
-const KEY_LENGTH = Number(process.env.KEY_LENGTH);
+const SALT_LENGTH = Number(process.env.PASS_SALT_LENGTH);
+const KEY_LENGTH = Number(process.env.PASS_KEY_LENGTH);
 
 /**
  * Hash a password using scrypt.

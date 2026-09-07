@@ -1,4 +1,4 @@
-import "../styles/auth.css";
+import "../styles/signup.css";
 
 import { axiosInstance } from "../lib/axios.js";
 import { useState } from "react";
@@ -40,16 +40,15 @@ function Signup() {
     }
 
     return (
-        <div className="auth-container">
-            <h1>CiRMessage - Sign up</h1>
+        <div className="signup-page">
+            <div className="signup-container">
+                <h1>CiRMessage - Signup</h1>
 
-            <form onSubmit={handleSignup}>
-                <div className="auth-inputs">
-
+                <div className="signup-inputs">
                     <div className="input-wrapper">
                         <input
                             type="text"
-                            placeholder="Display name"
+                            placeholder="Display Name"
                             value={displayName}
                             onChange={(event) => setDisplayName(event.target.value)}
                         />
@@ -66,7 +65,7 @@ function Signup() {
 
                     <div className="input-wrapper">
                         <input
-                            type="email"
+                            type="text"
                             placeholder="Email"
                             value={email}
                             onChange={(event) => setEmail(event.target.value)}
@@ -88,9 +87,12 @@ function Signup() {
                             />
                         </button>
                     </div>
+
                 </div>
 
-                <button className="auth-button" type="submit">Sign up</button>
+                <button className="signup-button" onClick={handleSignup}>
+                    Sign up
+                </button>
 
                 <div className="redirect-links">
                     <p>
@@ -98,7 +100,7 @@ function Signup() {
                         <Link to="/login">Login</Link>
                     </p>
                 </div>
-            </form>
+            </div>
         </div>
     );
 }
