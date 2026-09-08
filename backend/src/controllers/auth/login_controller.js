@@ -1,7 +1,6 @@
 import "dotenv/config";
 import mod_user from "../../models/mod_user.js";
 
-import { decryptEmail } from "../../ultilities/crypt.js";
 import { generateToken } from "../../ultilities/utils.js";
 import { verifyPassword } from "../../ultilities/hash.js";
 import { STATUS_CODES } from "../../status_codes.js";
@@ -18,35 +17,22 @@ export const login = async (req, res) => {
 
         identifier = identifier.trim().toLowerCase();
 
-        let user;
-
-        // Username
-        user = await mod_user.findOne({
-            username: identifier
+        // Find user by identifier
+        const user = await mod_user.findOne({
+            $or: [
+                { username: identifier },
+                { email: identifier}
+            ]
         });
 
-        // Email
-        if (!user) {
-            const users = await mod_user.find({});
-
-            for (const possibleUser of users) {
-                const email = await decryptEmail(possibleUser.email);
-
-                if (email === identifier) {
-                    user = possibleUser;
-                    break;
-                }
-            }
-        }
-
-        const userError = checkUser(user);
+        const userError = await checkUser(user);
         if (userError) {
             return res
                 .status(STATUS_CODES.ERROR.WEB_BAD_REQUEST)
                 .json({ message: userError });
         }
 
-        const passwordError = await checkPassword(password, user);
+        const passwordError = await checkPassword(password, user.password);
         if (passwordError) {
             return res
                 .status(STATUS_CODES.ERROR.WEB_BAD_REQUEST)
@@ -71,14 +57,14 @@ export const login = async (req, res) => {
     }
 };
 
-function checkUser(user) {
+async function checkUser(user) {
     if (!user) {
         return "Incorrect login data";
     }
 }
 
-async function checkPassword(password, user) {
-    const isPasswordCorrect = await verifyPassword(password, user.password);
+async function checkPassword(receivedPassword, storedPassword) {
+    const isPasswordCorrect = await verifyPassword(receivedPassword, storedPassword);
     if (!isPasswordCorrect) {
         return "Incorrect login data";
     }

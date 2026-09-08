@@ -1,15 +1,15 @@
 import crypto from "crypto";
 
 const ALGORITHM = "aes-256-gcm";
-const KEY = Buffer.from(process.env.MAIL_ENCRYPT_KEY, "hex");
+const KEY = Buffer.from(process.env.SEC_KEY, "hex");
 
-export const encryptEmail = async (email) => {
+export const encrypt = async (value) => {
     const iv = crypto.randomBytes(12);
 
     const cipher = crypto.createCipheriv(ALGORITHM, KEY, iv);
 
     const encrypted = Buffer.concat([
-        cipher.update(email, "utf8"),
+        cipher.update(value, "utf8"),
         cipher.final()
     ]);
 
@@ -22,12 +22,12 @@ export const encryptEmail = async (email) => {
     ].join(":");
 };
 
-export const decryptEmail = async (email) => {
+export const decrypt = async (value) => {
     const [ivHex, authTagHex, encryptedHex] =
-        email.split(":");
+        value.split(":");
 
     if (!ivHex || !authTagHex || !encryptedHex) {
-        throw new Error("Invalid encrypted email");
+        throw new Error("Invalid encrypted value");
     }
 
     const iv = Buffer.from(ivHex, "hex");

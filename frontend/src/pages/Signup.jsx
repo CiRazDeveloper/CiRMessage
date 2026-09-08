@@ -15,6 +15,7 @@ function Signup() {
     const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [secret, setSecret] = useState("");
 
 
     async function handleSignup(event) {
@@ -25,6 +26,7 @@ function Signup() {
                 displayName,
                 username,
                 email,
+                secret,
                 password
             });
 
@@ -42,7 +44,7 @@ function Signup() {
     return (
         <div className="signup-page">
             <div className="signup-container">
-                <h1>CiRMessage - Signup</h1>
+                <h1>Signup</h1>
 
                 <div className="signup-inputs">
                     <div className="input-wrapper">
@@ -84,6 +86,22 @@ function Signup() {
                             <img
                                 src={showInput ? "/eye_on.svg" : "/eye_off.svg"}
                                 alt={showInput ? "Hide password" : "Show password"}
+                            />
+                        </button>
+                    </div>
+
+                    <div className="input-wrapper">
+                        <input
+                            type={showInput ? "text" : "password"}
+                            placeholder="Secret (REMEMBER THIS!)"
+                            value={secret}
+                            onChange={(event) => setSecret(event.target.value)}
+                        />
+
+                        <button type="button" className="input-toggle" onClick={toggleVisibility}>
+                            <img
+                                src={showInput ? "/eye_on.svg" : "/eye_off.svg"}
+                                alt={showInput ? "Hide secret" : "Show secret"}
                             />
                         </button>
                     </div>

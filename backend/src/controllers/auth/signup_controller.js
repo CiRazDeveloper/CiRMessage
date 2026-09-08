@@ -1,17 +1,17 @@
 import "dotenv/config";
 import mod_user from "../../models/mod_user.js";
 
-import { encryptEmail } from "../../ultilities/crypt.js";
 import { generateToken } from "../../ultilities/utils.js";
 import { hashPassword } from "../../ultilities/hash.js";
 import { STATUS_CODES } from "../../status_codes.js";
+import { encrypt } from "../../ultilities/crypt.js";
 
 export const signup = async (req, res) => {
-    let { displayName, username, email, password } = req.body;
+    let { displayName, username, email, secret, password } = req.body;
 
     try {
         // Check required fields
-        if (!displayName || !username || !email || !password) {
+        if (!displayName || !username || !email || !secret || !password) {
             return res
                 .status(STATUS_CODES.ERROR.WEB_BAD_REQUEST)
                 .json({ message: "All fields must be filled out" });
@@ -21,10 +21,11 @@ export const signup = async (req, res) => {
         displayName = displayName.trim();
         username = username.trim().toLowerCase();
         email = email.trim().toLowerCase();
+        secret = secret.trim();
         password = password.trim();
 
         // Validate displayName
-        const displayNameError = checkDisplayName(displayName);
+        const displayNameError = await checkDisplayName(displayName);
         if (displayNameError) {
             return res
                 .status(STATUS_CODES.ERROR.WEB_BAD_REQUEST)
@@ -40,23 +41,23 @@ export const signup = async (req, res) => {
         }
 
         // Validate email
-        const emailError = await checkEmailGrammar(email);
-        if (emailError) {
-            return res
-                .status(STATUS_CODES.ERROR.WEB_BAD_REQUEST)
-                .json({ message: emailError });
-        }
-
-        const encryptedEmail = await encryptEmail(email);
-        const findEmailError = await checkEmail(encryptedEmail);
+        const findEmailError = await checkEmail(email);
         if (findEmailError) {
             return res
                 .status(STATUS_CODES.ERROR.WEB_BAD_REQUEST)
                 .json({ message: findEmailError });
         }
 
+        // Validate secret
+        const secretError = await checkSecret(secret);
+        if (secretError) {
+            return res
+                .status(STATUS_CODES.ERROR.WEB_BAD_REQUEST)
+                .json({ message: secretError });
+        }
+ 
         // Validate password
-        const passwordError = checkPassword(password);
+        const passwordError = await checkPassword(password);
         if (passwordError) {
             return res
                 .status(STATUS_CODES.ERROR.WEB_BAD_REQUEST)
@@ -64,13 +65,15 @@ export const signup = async (req, res) => {
         }
 
         // Hashes
+        const hashedSecret = await encrypt(secret);
         const hashedPassword = await hashPassword(password);
 
         // Create user
         const newUser = new mod_user({
             displayName: displayName,
             username: username,
-            email: encryptedEmail,
+            email: email,
+            secret: hashedSecret,
             password: hashedPassword,
             profilePicture: ""
         });
@@ -99,7 +102,7 @@ export const signup = async (req, res) => {
 };
 
 
-function checkDisplayName(displayName) {
+async function checkDisplayName(displayName) {
     if (displayName.length < 3) {
         return "Display name length must be three (3) or more";
     }
@@ -107,10 +110,15 @@ function checkDisplayName(displayName) {
     return null;
 }
 
-
 async function checkUsername(username) {
     if (username.length < 3) {
         return "Username length must be three (3) or more";
+    }
+
+    // Environment variables are strings, so convert to RegExp
+    const usernameRegex = new RegExp(process.env.USERNAME_REGEX);
+    if (!usernameRegex.test(username)) {
+        return "The username can only contain lower case letters, numbers, underscores and minus characters";
     }
 
     const userName = await mod_user.findOne({
@@ -124,21 +132,14 @@ async function checkUsername(username) {
     return null;
 }
 
-
-async function checkEmailGrammar(email) {
+async function checkEmail(email) {
     // Environment variables are strings, so convert to RegExp
-    const emailRegex = new RegExp(process.env.EMAIL_REGEX);
-
+    const emailRegex = new RegExp(process.env.MAIL_REGEX);
     if (!emailRegex.test(email)) {
         return "Invalid email format";
     }
 
-    return null;
-}
-
-async function checkEmail(email) {
     const userEmail = await mod_user.findOne({ email: email });
-
     if (userEmail) {
         return "A user with this email already exists";
     }
@@ -146,14 +147,28 @@ async function checkEmail(email) {
     return null;
 }
 
+async function checkSecret(secret) {
+    if (secret.length < 12) {
+        return "Secret length must be eight (12) or more";
+    }
 
-function checkPassword(password) {
+    // Environment variables are strings, so convert to RegExp
+    const secretRegex = new RegExp(process.env.SEC_REGEX);
+
+    if (!secretRegex.test(secret)) {
+        return "The secret needs to contain at least one (1) lowercase letter, one (1) uppercase letter, one (1) number";
+    }
+
+    return null;
+}
+
+async function checkPassword(password) {
     if (password.length < 8) {
         return "Password length must be eight (8) or more";
     }
 
     // Environment variables are strings, so convert to RegExp
-    const passwordRegex = new RegExp(process.env.PASSWORD_REGEX);
+    const passwordRegex = new RegExp(process.env.PASS_REGEX);
 
     if (!passwordRegex.test(password)) {
         return "The password needs to contain at least one (1) lowercase letter, one (1) uppercase letter, one (1) number and one (1) special character";

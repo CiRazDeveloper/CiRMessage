@@ -1,49 +1,49 @@
 import "dotenv/config";
 import mod_user from "../../models/mod_user.js";
 
-import { decryptEmail } from "../../ultilities/crypt.js";
+import { decrypt } from "../../ultilities/crypt.js";
 import { hashPassword } from "../../ultilities/hash.js";
 import { STATUS_CODES } from "../../status_codes.js";
 
 export const reset_password = async (req, res) => {
-    let { username, email, newPassword } = req.body;
+    let { identifier, secret, newPassword } = req.body;
 
     try {
         // Check required fields
-        if (!username || !email || !newPassword) {
+        if (!identifier || !secret || !newPassword) {
             return res
                 .status(STATUS_CODES.ERROR.WEB_BAD_REQUEST)
                 .json({ message: "All fields must be filled out" });
         }
 
         // Clean input
-        username = username.trim().toLowerCase();
-        email = email.trim().toLowerCase();
+        identifier = identifier.trim().toLowerCase();
 
-        // Find user by username
         const user = await mod_user.findOne({
-            username
+            $or: [
+                { username: identifier },
+                { email: identifier}
+            ]
         });
 
-        if (!user) {
+        // Validate user
+        const userError = await checkUser(user, identifier);
+        if (userError) {
             return res
                 .status(STATUS_CODES.ERROR.WEB_BAD_REQUEST)
-                .json({ message: "Incorrect data!" });
+                .json({ message: userError });
         }
 
-        // Decrypt stored email
-        const storedEmail = await decryptEmail(user.email);
-
-        // Check whether email belongs to this username
-        if (storedEmail !== email) {
+        // Validate secret
+        const secretError = await checkSecret(secret, user.secret);
+        if (secretError) {
             return res
                 .status(STATUS_CODES.ERROR.WEB_BAD_REQUEST)
-                .json({ message: "Incorrect data!" });
+                .json({ message: secretError });
         }
 
         // Validate new password
-        const passwordError = checkPassword(newPassword);
-
+        const passwordError = await checkPassword(newPassword);
         if (passwordError) {
             return res
                 .status(STATUS_CODES.ERROR.WEB_BAD_REQUEST)
@@ -73,7 +73,15 @@ export const reset_password = async (req, res) => {
     }
 };
 
-function checkPassword(password) {
+async function checkUser(user) {
+    if (!user) {
+        return "You provided incorrect data!";
+    }
+
+    return null;
+}
+
+async function checkPassword(password) {
     if (password.length < 8) {
         return "Password length must be eight (8) or more";
     }
@@ -85,4 +93,14 @@ function checkPassword(password) {
     }
 
     return null;
+}
+
+async function checkSecret(providedSecret, storedSecret) {
+    const decryptedSecret = await decrypt(storedSecret);
+
+    if (providedSecret !== decryptedSecret) {
+        return "You provided incorrect data!";
+    }
+
+    return null
 }

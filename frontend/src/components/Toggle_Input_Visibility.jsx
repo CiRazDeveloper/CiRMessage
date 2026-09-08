@@ -1,13 +1,16 @@
 import { useState } from "react";
 
-function toggleInputVisibility() {
-  const [showInput, setShowInput] = useState(false);
+function useToggleInputVisibility() {
+    const [showInput, setShowInput] = useState(false);
 
-  function toggleVisibility() {
-    setShowInput(!showInput);
-  }
+    const toggleVisibility = () => {
+        setShowInput((previous) => !previous);
+    };
 
-  return {showInput, toggleVisibility};
+    return {
+        showInput,
+        toggleVisibility,
+    };
 }
 
-export default toggleInputVisibility;
+export default useToggleInputVisibility;

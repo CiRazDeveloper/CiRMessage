@@ -6,6 +6,7 @@
        PRIVATE
        ============================== */
 
+    --private-width: 500px;
     --private-gap: 20px;
     --private-font-family: Arial, Helvetica, sans-serif;
     --private-padding: 20px;
@@ -31,13 +32,15 @@
 }
 
 .login-container {
-    background-color: var(--background-color);
-    color: var(--text-color);
-    
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    
+    background-color: var(--background-color);
+    color: var(--text-color);
+    
+    width: var(--private-width);
 }
 
 .login-container h1 {

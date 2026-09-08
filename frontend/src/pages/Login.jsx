@@ -38,7 +38,7 @@ function Login() {
     return (
         <div className="login-page">
             <div className="login-container">
-                <h1>CiRMessage - Login</h1>
+                <h1>Login</h1>
 
                 <div className="login-inputs">
                     <div className="input-wrapper">

@@ -2,16 +2,25 @@ import "../styles/reset_password.css";
 
 import { axiosInstance } from "../lib/axios.js";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import toggleInputVisibility from "../components/Toggle_Input_Visibility.jsx";
 
 function Reset_Password() {
     const navigate = useNavigate();
-    const { showInput, toggleVisibility } = toggleInputVisibility();
+    const {
+        showInput: showInputSecret,
+        toggleVisibility: toggleVisibilitySecret,
+    } = toggleInputVisibility();
+
+    const {
+        showInput: showInputPassword,
+        toggleVisibility: toggleVisibilityPassword,
+    } = toggleInputVisibility();
+
     
-    const [username, setUsername] = useState("");
-    const [email, setEmail] = useState("");
+    const [identifier, setIdentifier] = useState("");
+    const [secret, setSecret] = useState("");
     const [newPassword, setPassword] = useState("");
 
 
@@ -20,9 +29,9 @@ function Reset_Password() {
 
         try {
             const response = await axiosInstance.post("/auth/reset_password", {
-                username,
-                email,
-                newPassword
+                identifier,
+                secret,
+                newPassword,
             });
 
             console.log(response.data);
@@ -37,39 +46,46 @@ function Reset_Password() {
     return (
         <div className="reset_password-page">
             <div className="reset_password-container">
-                <h1>CiRMessage - Reset Password</h1>
+                <h1>Reset Password</h1>
 
                 <div className="reset_password-inputs">
                     <div className="input-wrapper">
                         <input
                             type="text"
-                            placeholder="Username"
-                            value={username}
-                            onChange={(event) => setUsername(event.target.value)}
+                            placeholder="Username or Email"
+                            value={identifier}
+                            onChange={(event) => setIdentifier(event.target.value)}
                         />
                     </div>
 
                     <div className="input-wrapper">
                         <input
-                            type="text"
-                            placeholder="Email"
-                            value={email}
-                            onChange={(event) => setEmail(event.target.value)}
+                            type={showInputSecret ? "text" : "password"}
+                            placeholder="Secret"
+                            value={secret}
+                            onChange={(event) => setSecret(event.target.value)}
                         />
+
+                        <button type="button" className="input-toggle" onClick={toggleVisibilitySecret}>
+                            <img
+                                src={showInputSecret ? "/eye_on.svg" : "/eye_off.svg"}
+                                alt={showInputSecret ? "Hide secret" : "Show secret"}
+                            />
+                        </button>
                     </div>
 
                     <div className="input-wrapper">
                         <input
-                            type={showInput ? "text" : "password"}
+                            type={showInputPassword ? "text" : "password"}
                             placeholder="New Password"
                             value={newPassword}
                             onChange={(event) => setPassword(event.target.value)}
                         />
 
-                        <button type="button" className="input-toggle" onClick={toggleVisibility}>
+                        <button type="button" className="input-toggle" onClick={toggleVisibilityPassword}>
                             <img
-                                src={showInput ? "/eye_on.svg" : "/eye_off.svg"}
-                                alt={showInput ? "Hide password" : "Show password"}
+                                src={showInputPassword ? "/eye_on.svg" : "/eye_off.svg"}
+                                alt={showInputPassword ? "Hide password" : "Show password"}
                             />
                         </button>
                     </div>
@@ -78,6 +94,13 @@ function Reset_Password() {
                 <button className="reset_password-button" onClick={handleResetPassword}>
                     Reset Password
                 </button>
+
+                <div className="redirect-links">
+                    <p>
+                        Do you want to go back?{" "}
+                        <Link to="/login">Login</Link>
+                    </p>
+                </div>
             </div>
         </div>
     );
