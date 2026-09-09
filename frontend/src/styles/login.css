@@ -2,9 +2,7 @@
 @import "./toggle_input_visibility.css";
 
 :root {
-    /* ==============================
-       PRIVATE
-       ============================== */
+    /* PRIVATE*/
 
     --private-width: 500px;
     --private-gap: 20px;
@@ -17,9 +15,7 @@
 }
 
 
-/* ==============================
-   AUTH
-   ============================== */
+/* AUTH */
 
 .login-page {
     display: flex;
@@ -118,9 +114,7 @@
 
 
 
-/* ==============================
-   MOBILE
-   ============================== */
+/* MOBILE */
 
 @media (max-width: 600px) {
 
