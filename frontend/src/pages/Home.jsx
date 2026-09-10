@@ -1,27 +1,33 @@
-
 import "./../styles/home.css";
 
-import { useMemo, useState } from "react";
-import { getDisplayName, getUsername } from "../storage.js";
-import { useStatus } from "../hooks/useStatus.js";
-import {
-    initialChats,
-    searchableUsers,
-    statusLabels,
-} from "../data/homeData.js";
+import { useState } from "react";
+import { getDisplayName, getUsername } from "./../storage.js";
+import { setStatus, statusIcons } from "./../scripts/setStatus.js";
 
 function Home() {
     const displayName = getDisplayName();
     const username = getUsername();
 
-    const {
-        statusMode,
-        setStatusMode,
-        currentStatus,
-    } = useStatus();
-
+    // General
     const [activePage, setActivePage] = useState("chats");
     const [profileOpen, setProfileOpen] = useState(false);
+
+    // Searches
+    const [globalSearch, setGlobalSearch] = useState("");
+    const [chatSearch, setChatSearch] = useState("");
+    
+    // Chats
+    const [message, sendMessage] = useState("");
+
+    // Profile
+    const [activityStatus, setActivityStatus] = useState(
+        localStorage.getItem("activityStatus") || "Automatic"
+    );
+
+    const handleStatusChange = (status) => {
+        setActivityStatus(status);
+        setStatus(status);
+    };
 
     return (
         <div className="home-container">
@@ -63,52 +69,114 @@ function Home() {
                         <div className="avatar">{displayName.charAt(0)}</div>
                         <span>
                             <strong>{displayName}</strong>
-                            <small>
-                                <i className={`status-dot ${currentStatus}`} />
-                                {statusLabels[currentStatus]}
+                            <small className="activity-status">
+                                Status: 
+                                <img
+                                    src={statusIcons[activityStatus]}
+                                    alt=""
+                                    className="status-icon"
+                                />
+                                {activityStatus}
                             </small>
                         </span>
                     </button>
 
                     {profileOpen && (
                         <div className="profile-menu">
-                            <button className="menu-item">Profile</button>
+                            <button className="menu-item btn-profile">Profile</button>
 
                             <div className="status-submenu">
-                                <button className="menu-item status-trigger">
+                                <button className="menu-item btn-status-trigger">
                                     <span>Status</span>
                                     <span className="status-arrow"></span>
                                 </button>
 
                                 <div className="status-options">
-                                    {Object.keys(statusLabels).map((option) => (
+                                    {Object.keys(statusIcons).map((status) => (
                                         <button
-                                            className="menu-item status-option"
-                                            key={option}
-                                            onClick={() => {
-                                                setStatusMode(option);
-                                                setProfileOpen(false);
-                                            }}
+                                            className="menu-item btn-status-option"
+                                            key={status}
+                                            onClick={() => handleStatusChange(status)}
                                         >
-                                            <span>
-                                                <i className={`status-dot ${option}`} />
-                                                {statusLabels[option]}
-                                            </span>
-                                            {statusMode === option && <b>✓</b>}
+                                            <img
+                                                src={statusIcons[status]}
+                                                alt=""
+                                                className="status-icon"
+                                            />
+
+                                            <span>{status}</span>
+
+                                            {activityStatus === status && (
+                                                <span className="status-check" aria-label="Selected">
+                                                    ✓
+                                                </span>
+                                            )}
                                         </button>
                                     ))}
                                 </div>
                             </div>
 
-                            <button className="menu-item log-out">Log Out</button>
+                            <button className="menu-item btn-log-out">Log Out</button>
                         </div>
                     )}
-
-
                 </div>
             </aside>
 
+            {activePage === "chats" && (
+                <>
+                    <section className="chat-list-panel">
+                        <header className="panel-header">
+                            <div>
+                                <h1>Chats</h1>
+                            </div>
+                        </header>
 
+                        <div className="input-wrapper">
+                            <input
+                                type="text"
+                                placeholder="Search active chats"
+                                value={chatSearch}
+                                onChange={(event) => setChatSearch(event.target.value)}
+                            />
+                        </div>
+
+                        <div className="chat-list">
+                            
+                        </div>
+                    </section>
+
+                    <section className="conversation-panel">
+                        <h1>Conversation</h1>
+                    </section>
+                </>
+            )}
+
+            {activePage === "search" && (
+                <section className="search-page">
+                    <h1>Search</h1>
+
+                    <div className="input-wrapper">
+                        <input
+                            type="text"
+                            placeholder="Search for @Username"
+                            value={globalSearch}
+                            onChange={(event) => setGlobalSearch(event.target.value)}
+                        />
+                    </div>
+                </section>
+
+            )}
+
+            {activePage === "settings" && (
+                <section className="settings-page">
+                    <h1>Settings</h1>
+
+                    <div className="settings-card">
+                        <h2>Settings</h2>
+                        <p>Additional account settings will appear here.</p>
+                    </div>
+                </section>
+            )}
         </div>
 
 

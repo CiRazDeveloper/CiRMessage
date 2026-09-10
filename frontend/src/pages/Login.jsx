@@ -1,6 +1,6 @@
 import "../styles/login.css";
 
-import { axiosInstance } from "../lib/axios.js";
+import { axiosInstance } from "../scripts/lib/axios.js";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { saveUser } from "../storage.js";

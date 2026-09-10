@@ -3,7 +3,7 @@ import {
     saveUser,
     removeUser,
     setIsCheckingAuth
-} from "../storage.js";
+} from "../../storage.js";
 
 export const checkAuth = async () => {
     try {

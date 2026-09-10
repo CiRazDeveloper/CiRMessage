@@ -19,12 +19,12 @@ function Home() {
     } = useStatus();
 
     const [activePage, setActivePage] = useState("chats");
+    const [profileOpen, setProfileOpen] = useState(false);
     const [chats, setChats] = useState(initialChats);
     const [selectedChatId, setSelectedChatId] = useState(1);
     const [chatSearch, setChatSearch] = useState("");
     const [globalSearch, setGlobalSearch] = useState("");
     const [message, setMessage] = useState("");
-    const [profileOpen, setProfileOpen] = useState(false);
 
     const selectedChat = chats.find((chat) => chat.id === selectedChatId);
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import Loading from "./../components/Loading.jsx";
 
-import { checkAuth } from "../security/checkAuth.js";
+import { checkAuth } from "../scripts/security/checkAuth.js";
 
 function ProtectedRoute() {
     const [isAuthenticated, setIsAuthenticated] = useState(null);
