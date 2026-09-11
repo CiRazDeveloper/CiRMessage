@@ -3,6 +3,7 @@ import { Navigate, Outlet } from "react-router-dom";
 import { checkAuth } from "../scripts/security/checkAuth.js";
 
 import Loading from "../components/Loading.jsx";
+import SocketConnection from "../components/SocketConnection.jsx";
 
 function ProtectedRoute() {
     const [isAuthenticated, setIsAuthenticated] = useState(null);
@@ -24,7 +25,12 @@ function ProtectedRoute() {
         return <Navigate to="/login" replace />;
     }
 
-    return <Outlet />;
+    return (
+        <>
+            <SocketConnection />
+            <Outlet />
+        </>
+    );
 }
 
 export default ProtectedRoute;

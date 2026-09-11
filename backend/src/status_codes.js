@@ -13,5 +13,6 @@ export const STATUS_CODES = {
         // Web
         WEB_OK: 200,
         WEB_CREATED: 201,
+        WEB_NO_CONTENT: 204,
     }
 };

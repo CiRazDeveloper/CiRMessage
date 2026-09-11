@@ -14,14 +14,22 @@ const streamObject = async (res, key) => {
         })
     );
 
-    res.setHeader("Content-Type", object.ContentType || "application/octet-stream");
-    res.setHeader("Content-Disposition", "attachment; filename=\"message-image\"");
+    res.setHeader(
+        "Content-Type",
+        object.ContentType || "application/octet-stream"
+    );
+
+    res.setHeader(
+        "Content-Disposition",
+        "inline; filename=\"message-image\""
+    );
 
     if (object.ContentLength !== undefined) {
         res.setHeader("Content-Length", object.ContentLength);
     }
 
     res.setHeader("Cache-Control", "private, max-age=86400");
+
     object.Body.pipe(res);
 };
 
@@ -41,8 +49,8 @@ export const getProfileMedia = async (req, res) => {
 
         if (!user.profilePicture) {
             return res
-                .status(STATUS_CODES.ERROR.WEB_NOT_FOUND)
-                .json({ message: "Profile picture not found" });
+                .status(STATUS_CODES.INFO.WEB_NO_CONTENT)
+                .send();
         }
 
         await streamObject(res, user.profilePicture);

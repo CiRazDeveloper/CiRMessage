@@ -2,8 +2,6 @@ import "dotenv/config";
 import jwt from "jsonwebtoken"
 import mod_user from "../models/mod_user.js";
 
-import { generateToken } from "../ultilities/utils.js";
-import { verifyPassword } from "../ultilities/hash.js";
 import { STATUS_CODES } from "../status_codes.js";
 
 export const protectRoute = async (req, res, nextFunc) => {

@@ -4,6 +4,7 @@ import "./../styles/switch_button.css";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { axiosInstance } from "../scripts/lib/axios.js";
+import { socket } from "../scripts/lib/socket.js";
 import { getDisplayName } from "./../storage.js";
 import { setStatus, statusIcons } from "./../scripts/setStatus.js";
 
@@ -84,13 +85,127 @@ function Home() {
     const [profileOpen, setProfileOpen] = useState(false);
 
     const [activityStatus, setActivityStatus] = useState(
-        localStorage.getItem("activityStatus") || "Automatic"
+        localStorage.getItem("activityStatus") || "Online"
     );
 
     const handleStatusChange = (status) => {
-        setActivityStatus(status);
-        setStatus(status);
+        socket.emit(
+            "set-status",
+            (response) => {
+                if (!response?.success) {
+                    console.error(
+                        "Could not change status:",
+                        response?.message
+                    );
+
+                    return;
+                }
+
+                setActivityStatus(status);
+                setStatus(status);
+
+                console.log(
+                    `Status changed to ${response.status}`
+                );
+            }
+        );
     };
+
+    useEffect(() => {
+        if (activityStatus !== "Online") {
+            return;
+        }
+
+        const CHECK_INTERVAL_MS = 60 * 1000;
+        const AWAY_AFTER_MS = 5 * 60 * 1000;
+
+        let lastActivity = Date.now();
+        let currentPresenceStatus = "online";
+
+        const setPresenceStatus = (status) => {
+            if (currentPresenceStatus === status) {
+                return;
+            }
+
+            currentPresenceStatus = status;
+
+            socket.emit("set-status", status);
+        };
+
+        const handleActivity = () => {
+            lastActivity = Date.now();
+
+            if (currentPresenceStatus === "away") {
+                setPresenceStatus("online");
+            }
+        };
+
+        const checkActivity = () => {
+            const inactiveFor =
+                Date.now() - lastActivity;
+
+            if (inactiveFor >= AWAY_AFTER_MS) {
+                setPresenceStatus("away");
+            }
+        };
+
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                return;
+            }
+
+            lastActivity = Date.now();
+
+            if (currentPresenceStatus === "away") {
+                setPresenceStatus("online");
+            }
+        };
+
+        const activityEvents = [
+            "mousedown",
+            "keydown",
+            "touchstart",
+            "scroll",
+        ];
+
+        activityEvents.forEach((event) => {
+            window.addEventListener(
+                event,
+                handleActivity
+            );
+        });
+
+        document.addEventListener(
+            "visibilitychange",
+            handleVisibilityChange
+        );
+
+        socket.emit("set-status", "online");
+
+        const activityCheckInterval =
+            setInterval(
+                checkActivity,
+                CHECK_INTERVAL_MS
+            );
+
+        return () => {
+            clearInterval(
+                activityCheckInterval
+            );
+
+            activityEvents.forEach((event) => {
+                window.removeEventListener(
+                    event,
+                    handleActivity
+                );
+            });
+
+            document.removeEventListener(
+                "visibilitychange",
+                handleVisibilityChange
+            );
+        };
+    }, [activityStatus]);
 
     // Log Out
     async function logOut (event) {
@@ -102,6 +217,7 @@ function Home() {
             console.log(response.data);
 
             if (response.status === 200) {
+                socket.disconnect();
                 navigate("/login");
             }
         } catch (error) {

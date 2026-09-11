@@ -6,16 +6,24 @@ export const getMessagesByUserId = async (req, res) => {
         const myId = req.user._id;
         const { id: userToChatId } = req.params;
 
-        const messages = await mod_message.find({
-            $or: [
-                { senderId: myId, receiverId: userToChatId },
-                { senderId: userToChatId, receiverId: myId },
-            ],
-        })
+        const messages = await mod_message
+            .find({
+                $or: [
+                    { senderId: myId, receiverId: userToChatId },
+                    { senderId: userToChatId, receiverId: myId },
+                ],
+            })
+            .sort({ createdAt: 1 })
+            .lean();
+
+        const messagesWithDirection = messages.map(message => ({
+            ...message,
+            isMine: message.senderId.toString() === myId.toString(),
+        }));
 
         return res
             .status(STATUS_CODES.INFO.WEB_OK)
-            .json(messages);
+            .json(messagesWithDirection);
     } catch (error) {
         console.error("Error in getMessagesByUserId:", error);
 
