@@ -9,6 +9,7 @@ import Login from "./pages/Login";
 import Reset_Password from "./pages/Reset_Password";
 import Signup from "./pages/Signup";
 import Home from "./pages/Home";
+import Chat from "./pages/Chat";
 
 import ProtectedRoute from "./pages/ProtectedRoute";
 
@@ -25,6 +26,7 @@ function App() {
                 {/* Protected routes */}
                 <Route element={<ProtectedRoute />}>
                     <Route path="/home" element={<Home />} />
+                    <Route path="/chat/:id" element={<Chat />} />
                 </Route>
 
                 {/* Default */}

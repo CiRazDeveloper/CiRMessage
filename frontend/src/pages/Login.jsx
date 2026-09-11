@@ -1,8 +1,8 @@
 import "../styles/login.css";
 
-import { axiosInstance } from "../scripts/lib/axios.js";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { axiosInstance } from "../scripts/lib/axios.js";
 import { saveUser } from "../storage.js";
 
 import toggleInputVisibility from "../components/Toggle_Input_Visibility.jsx";
@@ -26,9 +26,11 @@ function Login() {
 
             console.log(response.data);
 
-            saveUser(response.data.user);
+            if (response.status === 200) {
+                saveUser(response.data.user);
+                navigate("/home");
+            }
 
-            navigate("/home");
         } catch (error) {
             console.error("Login failed:", error);
             console.log(error.response?.data);

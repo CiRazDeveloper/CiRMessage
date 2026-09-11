@@ -149,7 +149,7 @@ async function checkEmail(email) {
 
 async function checkSecret(secret) {
     if (secret.length < 12) {
-        return "Secret length must be eight (12) or more";
+        return "Secret length must be twelve (12) or more";
     }
 
     // Environment variables are strings, so convert to RegExp

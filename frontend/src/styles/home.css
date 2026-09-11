@@ -10,7 +10,7 @@
     --private-button-hover-color: #1d4ed8ff;
 
     /* CARD */
-    --private-card-background-color: #183da3;
+    --private-card-background-color: #1c48c2;
 
     /* LEFT SIDEBAR */
     --left-sidebar-border-right-color: #ffffffff;
@@ -59,10 +59,10 @@
 
 
 
-
 /* LEFT SIDEBAR */
 .left-sidebar {
     background-color: var(--private-background-color);
+
     width: 230px;
     min-height: 100vh;
     display: flex;
@@ -77,10 +77,11 @@
 }
 
 .left-sidebar-nav button {
-    border: 0;
-    border-radius: 9px;
     background: transparent;
     color: var(--private-text-color);
+
+    border: 0;
+    border-radius: 9px;
     cursor: pointer;
     font: inherit;
     text-align: left;
@@ -98,6 +99,8 @@
 }
 
 
+
+
 /* PROFILE */
 .profile-wrapper {
     position: relative;
@@ -105,19 +108,24 @@
 }
 
 .profile-card {
+    background: transparent;
+
     display: flex;
     align-items: center;
     gap: 10px;
     width: 100%;
     padding: 10px 4px;
     border: 0;
-    background: transparent;
     cursor: pointer;
     text-align: left;
 }
 
 .profile-card .avatar {
     color: var(--private-text-color);
+}
+
+.profile-card .avatar-status-icon {
+    display: none;
 }
 
 .profile-card span:last-child {
@@ -137,7 +145,7 @@
 }
 
 .profile-menu {
-    background: var(--private-card-background-color);
+    background-color: var(--private-card-background-color);
     color: var(--private-text-color);
 
     position: absolute;
@@ -167,15 +175,15 @@
 }
 
 .menu-item:hover {
-    background: var(--private-button-hover-color);
+    background-color: var(--private-button-hover-color);
 }
 
 .menu-item.btn-log-out {
-    background: #aa0000ff;
+    background-color: #aa0000ff;
 }
 
 .menu-item.btn-log-out:hover {
-    background: #ff0000ff;
+    background-color: #ff0000ff;
 }
 
 .status-submenu {
@@ -197,6 +205,8 @@
 }
 
 .status-options {
+    background-color: var(--private-card-background-color);
+
     position: absolute;
     top: -8px;
     left: 100%;
@@ -206,7 +216,6 @@
     padding: 8px;
     border: 1px solid #e5eaf2;
     border-radius: 12px;
-    background: var(--private-card-background-color);
     box-shadow: 0 12px 30px #0f172a26;
 }
 
@@ -228,11 +237,12 @@
 }
 
 .status-dot {
+    background-color: var(--status-dot-standard-color);
+
     display: inline-block;
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: var(--status-dot-standard-color);
 }
 
 .activity-status {
@@ -246,21 +256,165 @@
     height: 10px;
 }
 
-/* Search User */
-.search-page {
+
+
+/* CHAT */
+.chats-page {
+    background-color: var(--private-background-color);
+
     flex: 1;
     padding: 15px 30px;
-    background: var(--private-background-color);
+}
+
+.chats-page h1 {
+    color: var(--private-text-color);
+}
+
+.chats-results {
+    margin-top: 16px;
+
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.chats-user-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    padding: 10px 12px;
+    border-radius: 10px;
+
+    cursor: pointer;
+}
+
+.chats-user-card:hover {
+    background-color: var(--private-button-hover-color);
+}
+
+.chats-user-avatar {
+    width: 50px;
+    height: 50px;
+
+    border-radius: 50%;
+    object-fit: cover;
+
+    flex-shrink: 0;
+}
+
+.chats-user-avatar-fallback {
+    display: grid;
+    place-items: center;
+
+    background-color: var(--private-card-background-color);
+    color: var(--private-text-color);
+
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.chats-user-info {
+    color: var(--private-text-color);
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+
+    min-width: 0;
+}
+
+.chats-user-display-name {
+    font-weight: bold;
+    font-size: 20px;
+}
+
+.chats-user-username {
+    margin-top: 2px;
+    font-size: 15px;
+}
+
+
+
+/* SEARCH */
+.search-page {
+    background-color: var(--private-background-color);
+
+    flex: 1;
+    padding: 15px 30px;
 }
 
 .search-page h1 {
     color: var(--private-text-color);
 }
 
+.search-results {
+    margin-top: 16px;
+
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.search-user-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    padding: 10px 12px;
+    border-radius: 10px;
+
+    cursor: pointer;
+}
+
+.search-user-card:hover {
+    background-color: var(--private-button-hover-color);
+}
+
+.search-user-avatar {
+    width: 50px;
+    height: 50px;
+
+    border-radius: 50%;
+    object-fit: cover;
+
+    flex-shrink: 0;
+}
+
+.search-user-avatar-fallback {
+    display: grid;
+    place-items: center;
+
+    background-color: var(--private-card-background-color);
+    color: var(--private-text-color);
+
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.search-user-info {
+    color: var(--private-text-color);
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+
+    min-width: 0;
+}
+
+.search-user-display-name {
+    font-weight: bold;
+    font-size: 20px;
+}
+
+.search-user-username {
+    margin-top: 2px;
+    font-size: 15px;
+}
 
 /* SETTINGS */
 .settings-page {
-    background: var(--private-background-color);
+    background-color: var(--private-background-color);
 
     flex: 1;
     padding: 48px;
@@ -271,9 +425,8 @@
 }
 
 .settings-card {
-    /* color: #f8fafc; */
+    background-color: var(--private-card-background-color);
     color: var(--private-text-color);
-    background: var(--private-card-background-color);
 
     max-width: 500px;
     display: flex;
@@ -286,11 +439,165 @@
     text-align: center;
 }
 
-.settings-card button {
+.settings-card.privacy {
+    background-color: var(--private-button-hover-color);
+    color: #fff;
+
+    display: flex;
+
     border: 0;
     border-radius: 9px;
-    color: #fff;
-    background: var(--private-button-hover-color);
+    
     cursor: pointer;
     padding: 10px 16px;
+}
+
+.settings-card.btn-privacy {
+    border: 0;
+    border-radius: 9px;
+    
+    cursor: pointer;
+    padding: 10px 16px;
+}
+
+/* ACCOUNT SETTINGS */
+.settings-card.privacy {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+
+
+/* MOBILE */
+@media (max-width: 768px) {
+    /* LEFT SIDEBAR */
+    .brand {
+        display: none;
+    }
+
+    .left-sidebar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+
+        width: 100%;
+        min-height: unset;
+        height: 70px;
+
+        padding: 8px 12px;
+
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+
+        border-right: 0;
+        border-top: 1px solid var(--left-sidebar-border-right-color);
+
+        box-sizing: border-box;
+    }
+
+    .left-sidebar-nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+
+        flex: 1;
+        height: 100%;
+    }
+
+    .left-sidebar-nav button {
+        flex: 1;
+
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+
+        gap: 3px;
+        padding: 6px;
+
+        text-align: center;
+        font-size: 12px;
+    }
+
+    .left-sidebar-nav button > span {
+        font-size: 20px;
+    }
+
+    
+
+    /* PROFILE */
+    .profile-wrapper {
+        display: flex;
+        align-items: center;
+        margin-top: 0;
+        margin-left: auto;
+    }
+    
+    .profile-card {
+        width: auto;
+        padding: 6px;
+        margin: 0;
+        
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .profile-card span:last-child {
+        display: none;
+    }
+
+    .profile-card .avatar {
+        position: relative;
+
+        display: grid;
+        place-items: center;
+
+        width: 40px;
+        height: 40px;
+
+        border-radius: 50%;
+        background-color: var(--private-card-background-color);
+        color: var(--private-text-color);
+
+        font-weight: bold;
+    }
+
+    .profile-card .avatar-status-icon {
+        display: block;
+
+        position: absolute;
+        right: -1px;
+        bottom: -1px;
+
+        width: 12px;
+        height: 12px;
+
+        border-radius: 50%;
+        border: 2px solid var(--private-background-color);
+        box-sizing: content-box;
+    }
+
+    .profile-menu {
+        left: auto;
+        right: 0;
+        bottom: calc(100% + 10px);
+
+        width: 190px;
+    }
+
+    .status-options {
+        left: 0;
+        right: auto;
+
+        top: auto;
+        bottom: calc(100% + 3px);
+
+        width: 175px;
+    }
 }
