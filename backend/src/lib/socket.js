@@ -211,10 +211,12 @@ export const initializeSocket = (server) => {
             }
         );
 
-        socket.on("mark-messages-read", async (senderId, callback) => {
+        socket.on("message-read", async (senderId, callback) => {
                 try {
                     const receiverId =
                         socket.user._id;
+
+                    const seenAt = new Date();
 
                     const result =
                         await mod_message.updateMany(
@@ -234,10 +236,12 @@ export const initializeSocket = (server) => {
                     io.to(
                         `user:${senderId}`
                     ).emit(
-                        "messages-seen",
+                        "message-seen",
                         {
                             seenBy:
                                 receiverId.toString(),
+                            seenAt:
+                                seenAt.toISOString(),
                         }
                     );
 

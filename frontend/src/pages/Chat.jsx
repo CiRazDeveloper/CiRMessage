@@ -20,8 +20,8 @@ function Chat() {
     const [selectedImage, setSelectedImage] = useState(null);
     const messagesEndRef = useRef(null);
     const messageInputRef = useRef(null);
-    const deliveredMessageIdsRef =
-        useRef(new Set());
+    const deliveredMessageIdsRef = useRef(new Set());
+    const latestSeenAtRef = useRef(null);
 
 
     // --- PROFILE PICTURE ---
@@ -140,7 +140,7 @@ function Chat() {
             }
 
             socket.emit(
-                "mark-messages-read",
+                "message-read",
                 message.senderId
             );
 
@@ -268,7 +268,7 @@ function Chat() {
                 setMessages(loadedMessages);
 
                 socket.emit(
-                    "mark-messages-read",
+                    "message-read",
                     id
                 );
             } catch (error) {
@@ -410,12 +410,16 @@ function Chat() {
 
     // CHECK FOR SEEN
     useEffect(() => {
-        function handleMessagesSeen({
+        function handleMessageSeen({
             seenBy,
+            seenAt,
         }) {
             if (seenBy !== id) {
                 return;
             }
+
+            latestSeenAtRef.current =
+                seenAt;
 
             setMessages((previous) =>
                 previous.map((message) => {
@@ -423,8 +427,16 @@ function Chat() {
                         return message;
                     }
 
+                    if (
+                        new Date(message.createdAt) >
+                        new Date(seenAt)
+                    ) {
+                        return message;
+                    }
+
                     return {
                         ...message,
+                        delivered: true,
                         read: true,
                     };
                 })
@@ -432,14 +444,14 @@ function Chat() {
         }
 
         socket.on(
-            "messages-seen",
-            handleMessagesSeen
+            "message-seen",
+            handleMessageSeen
         );
 
         return () => {
             socket.off(
-                "messages-seen",
-                handleMessagesSeen
+                "message-seen",
+                handleMessageSeen
             );
         };
     }, [id]);
