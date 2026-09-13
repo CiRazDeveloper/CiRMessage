@@ -16,7 +16,6 @@ import routesMessages from "./routes/messages.js";
 
 // --- CONFIGURATIONS ---
 dotenv.config();
-const allowedOrigins = getAllowedOrigins();
 const app = express();
 const server = createServer(app);
 const __dirname = path.resolve();
@@ -25,6 +24,7 @@ app.use(express.json()); // req.body
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 
+const allowedOrigins = getAllowedOrigins();
 app.use(cors({
     origin: (origin, callback) => {
         if (
