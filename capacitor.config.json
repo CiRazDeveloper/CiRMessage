@@ -1,0 +1,5 @@
+{
+  "appId": "com.cirmessage.app",
+  "appName": "CiRMessage",
+  "webDir": "frontend/dist"
+}

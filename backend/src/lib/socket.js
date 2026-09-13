@@ -2,6 +2,8 @@ import { Server } from "socket.io";
 import { parse } from "cookie";
 import jwt from "jsonwebtoken";
 
+import { getAllowedOrigins } from "./cors.js";
+
 import mod_message from "../models/mod_message.js";
 import mod_user from "../models/mod_user.js";
 
@@ -22,7 +24,7 @@ export const initializeSocket = (server) => {
 
     io = new Server(server, {
         cors: {
-            origin: process.env.CLIENT_URL,
+            origin: getAllowedOrigins(),
             credentials: true,
         },
     });
