@@ -16,7 +16,7 @@ import routesMessages from "./routes/messages.js";
 
 // --- CONFIGURATIONS ---
 dotenv.config();
-const allowedOrigins =getAllowedOrigins();
+const allowedOrigins = getAllowedOrigins();
 const app = express();
 const server = createServer(app);
 const __dirname = path.resolve();
