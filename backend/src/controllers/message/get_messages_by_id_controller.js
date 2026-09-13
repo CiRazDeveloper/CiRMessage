@@ -6,29 +6,62 @@ export const getMessagesByUserId = async (req, res) => {
         const myId = req.user._id;
         const { id: userToChatId } = req.params;
 
+        await mod_message.updateMany(
+            {
+                senderId: userToChatId,
+                receiverId: myId,
+                read: false,
+            },
+            {
+                $set: {
+                    read: true,
+                },
+            }
+        );
+
         const messages = await mod_message
             .find({
                 $or: [
-                    { senderId: myId, receiverId: userToChatId },
-                    { senderId: userToChatId, receiverId: myId },
+                    {
+                        senderId: myId,
+                        receiverId: userToChatId,
+                    },
+                    {
+                        senderId: userToChatId,
+                        receiverId: myId,
+                    },
                 ],
             })
-            .sort({ createdAt: 1 })
+            .sort({
+                createdAt: 1,
+            })
             .lean();
 
-        const messagesWithDirection = messages.map(message => ({
-            ...message,
-            isMine: message.senderId.toString() === myId.toString(),
-        }));
+        const messagesWithDirection =
+            messages.map((message) => ({
+                ...message,
+                isMine:
+                    message.senderId.toString() ===
+                    myId.toString(),
+            }));
 
         return res
-            .status(STATUS_CODES.INFO.WEB_OK)
+            .status(
+                STATUS_CODES.INFO.WEB_OK
+            )
             .json(messagesWithDirection);
     } catch (error) {
-        console.error("Error in getMessagesByUserId:", error);
+        console.error(
+            "Error in getMessagesByUserId:",
+            error
+        );
 
         return res
-            .status(STATUS_CODES.ERROR.SERVER_INTERNAL_ERROR)
-            .json({ message: "Internal Server Error" });
+            .status(
+                STATUS_CODES.ERROR.SERVER_INTERNAL_ERROR
+            )
+            .json({
+                message: "Internal Server Error",
+            });
     }
 };

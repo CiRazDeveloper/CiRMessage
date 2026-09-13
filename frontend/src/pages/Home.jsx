@@ -6,18 +6,42 @@ import { useNavigate } from "react-router-dom";
 import { axiosInstance } from "../scripts/lib/axios.js";
 import { socket } from "../scripts/lib/socket.js";
 import { getDisplayName } from "./../storage.js";
-import { setStatus, statusIcons } from "./../scripts/setStatus.js";
+import { setStatus, statuses } from "./../scripts/setStatus.js";
+import StatusDot from "./../components/StatusDot.jsx";
 
-import SwitchButton from "./../components/Switch_Button.jsx";
+import SwitchButton from "../components/SwitchButton.jsx";
 
 function Home() {
     const navigate = useNavigate();
-
     const displayName = getDisplayName();
 
-    // General
+    // GENERAL
     const [activePage, setActivePage] = useState("chats");
+    // SEARCH
+    const [userSearch, setUserSearch] = useState("");
+    const [contacts, setContacts] = useState([]);
+    // OTHERS STATUS
+    const [userStatuses, setUserStatuses] = useState({});
+    // --- PROFILE ---
+    const [profileOpen, setProfileOpen] = useState(false);
 
+    const [activityStatus, setActivityStatus] = useState(
+        localStorage.getItem("activityStatus") || "Online"
+    );
+
+    const [presenceStatus, setPresenceStatus] = useState(
+        localStorage.getItem("activityStatus") || "Online"
+    );
+    // --- CHATS ---
+    const [chatSearch, setChatSearch] = useState("");
+    const [chats, setChats] = useState([]);
+    const [unreadCounts, setUnreadCounts] = useState({});
+    // --- SETTINGS ---
+    const [isOn, setIsOn] = useState(false);
+    
+
+
+    // --- GENERAL ---
     useEffect(() => {        
         if (activePage === "search") {
             console.log("Loading contacts...");
@@ -38,7 +62,17 @@ function Home() {
             async function loadChats() {
                 try {
                     const response = await axiosInstance.get("/messages/chats");
+
                     setChats(response.data);
+
+                    const counts = {};
+
+                    response.data.forEach((user) => {
+                        counts[user._id] =
+                            user.unreadCount || 0;
+                    });
+
+                    setUnreadCounts(counts);
                 } catch (error) {
                     console.error("Could not load chats: ", error);
                 }
@@ -48,10 +82,9 @@ function Home() {
         }
     }, [activePage]);
 
-    // Search
-    const [userSearch, setUserSearch] = useState("");
-    const [contacts, setContacts] = useState([]);
 
+
+    // --- SEARCH ---
     const searchValue = userSearch
         .trim()
         .replace(/^@/, "")
@@ -61,10 +94,48 @@ function Home() {
         contact.username?.toLowerCase().startsWith(searchValue)
     ) : [];
 
-    // Chats
-    const [chatSearch, setChatSearch] = useState("");
-    const [chats, setChats] = useState([]);
 
+    // --- CHATS ---
+    // OTHERS STATUS
+    useEffect(() => {
+        chats.forEach((user) => {
+            socket.emit(
+                "get-user-status",
+                user._id,
+                (response) => {
+                    setUserStatuses((previous) => ({
+                        ...previous,
+                        [user._id]:
+                        response?.status ||
+                        "Offline",
+                    }));
+                }
+            );
+        });
+        
+        function handleStatusChanged({
+            userId,
+            status,
+        }) {
+            setUserStatuses((previous) => ({
+                ...previous,
+                [userId]: status,
+            }));
+        }
+        
+        socket.on(
+            "user-status-changed",
+            handleStatusChanged
+        );
+        
+        return () => {
+            socket.off(
+                "user-status-changed",
+                handleStatusChanged
+            );
+        };
+    }, [chats]);
+    
     const chatSearchValue = chatSearch
         .trim()
         .replace(/^@/, "")
@@ -81,38 +152,31 @@ function Home() {
         });
     }
 
-    // Profile
-    const [profileOpen, setProfileOpen] = useState(false);
-
-    const [activityStatus, setActivityStatus] = useState(
-        localStorage.getItem("activityStatus") || "Online"
+    // UNREAD MESSAGES
+    const totalUnreadMessages =
+    Object.values(unreadCounts).reduce(
+        (total, count) => total + count,
+        0
     );
 
-    const handleStatusChange = (status) => {
-        socket.emit(
-            "set-status",
-            (response) => {
-                if (!response?.success) {
-                    console.error(
-                        "Could not change status:",
-                        response?.message
-                    );
 
-                    return;
-                }
+    function formatUnreadCount(count) {
+        return count >= 99 ? "+99" : count;
+    }
+    
 
-                setActivityStatus(status);
-                setStatus(status);
-
-                console.log(
-                    `Status changed to ${response.status}`
-                );
-            }
-        );
-    };
-
+    
+    // --- PROFILE ---
+    // MY STATUS
     useEffect(() => {
         if (activityStatus !== "Online") {
+            setPresenceStatus(activityStatus);
+            
+            socket.emit(
+                "set-status",
+                activityStatus
+            );
+            
             return;
         }
 
@@ -120,23 +184,30 @@ function Home() {
         const AWAY_AFTER_MS = 5 * 60 * 1000;
 
         let lastActivity = Date.now();
-        let currentPresenceStatus = "online";
+        let currentPresenceStatus = "Online";
 
-        const setPresenceStatus = (status) => {
+        const changePresenceStatus = (status) => {
             if (currentPresenceStatus === status) {
                 return;
             }
 
             currentPresenceStatus = status;
 
-            socket.emit("set-status", status);
+            setPresenceStatus(status);
+
+            socket.emit(
+                "set-status",
+                status
+            );
         };
 
         const handleActivity = () => {
             lastActivity = Date.now();
 
-            if (currentPresenceStatus === "away") {
-                setPresenceStatus("online");
+            if (
+                currentPresenceStatus === "Away"
+            ) {
+                changePresenceStatus("Online");
             }
         };
 
@@ -144,8 +215,10 @@ function Home() {
             const inactiveFor =
                 Date.now() - lastActivity;
 
-            if (inactiveFor >= AWAY_AFTER_MS) {
-                setPresenceStatus("away");
+            if (
+                inactiveFor >= AWAY_AFTER_MS
+            ) {
+                changePresenceStatus("Away");
             }
         };
 
@@ -156,8 +229,10 @@ function Home() {
 
             lastActivity = Date.now();
 
-            if (currentPresenceStatus === "away") {
-                setPresenceStatus("online");
+            if (
+                currentPresenceStatus === "Away"
+            ) {
+                changePresenceStatus("Online");
             }
         };
 
@@ -180,7 +255,12 @@ function Home() {
             handleVisibilityChange
         );
 
-        socket.emit("set-status", "online");
+        setPresenceStatus("Online");
+
+        socket.emit(
+            "set-status",
+            "Online"
+        );
 
         const activityCheckInterval =
             setInterval(
@@ -207,15 +287,47 @@ function Home() {
         };
     }, [activityStatus]);
 
-    // Log Out
+    const handleStatusChange = (status) => {
+        console.log(
+            "Manual status change:",
+            status,
+            typeof status
+        );
+
+        socket.emit(
+            "set-status",
+            status,
+            (response) => {
+                if (!response?.success) {
+                    console.error(
+                        "Could not change status:",
+                        response?.message
+                    );
+
+                    return;
+                }
+
+                setActivityStatus(status);
+                setPresenceStatus(status);
+                setStatus(status);
+
+                console.log(
+                    `Status changed to ${response.status}`
+                );
+            }
+        );
+    };
+
+
+    // LOG OUT
     async function logOut (event) {
         event.preventDefault();
-
+        
         try {
             const response = await axiosInstance.post("/auth/logout");
-
+            
             console.log(response.data);
-
+            
             if (response.status === 200) {
                 socket.disconnect();
                 navigate("/login");
@@ -225,8 +337,9 @@ function Home() {
         }
     }
 
-    // Settings
-    const [isOn, setIsOn] = useState(false);
+
+
+    // --- SETTINGS ---
     const handlePrivateAccount = () => {
         const newValue = !isOn;
 
@@ -240,7 +353,7 @@ function Home() {
     };
 
     return (
-        <div className="home-container">
+        <div className="home-page">
 
             {/* LEFT SIDEBAR */}
             <aside className="left-sidebar">
@@ -251,22 +364,46 @@ function Home() {
                 </div>
 
                 {/* NAVBAR */}
-                <nav className="left-sidebar-nav" aria-label="Navigation">
+                <nav className="nav" aria-label="Navigation">
                     <button className={activePage === "chats" ? "active" : ""}
                             onClick={() => setActivePage("chats")}>
-                        <span>▣</span> Chats
+                        <span className="nav-icon">
+                            ▣
+                        </span>
+                        <span className="nav-label">
+                            Chats
+                        </span>
+
+                        {activePage !== "chats" &&
+                            totalUnreadMessages > 0 && (
+                                <span className="unread-badge">
+                                    {formatUnreadCount(
+                                        totalUnreadMessages
+                                    )}
+                                </span>
+                            )}
                     </button>
 
                     <button className={activePage === "search" ? "active" : ""}
                             onClick={() => setActivePage("search")}>
-                        <span>⌕</span> Search
+                        <span className="nav-icon">
+                        ⌕
+                        </span>
+                        <span className="nav-label">
+                        Search
+                        </span>
                     </button>
                         
                     <button
                         className={activePage === "settings" ? "active" : ""}
                         onClick={() => setActivePage("settings")}
                     >
-                        <span>⚙</span> Settings
+                        <span className="nav-icon">
+                        ⚙
+                        </span>
+                        <span className="nav-label">
+                        Settings
+                        </span>
                     </button>
                 </nav>
 
@@ -274,35 +411,31 @@ function Home() {
                 <div className="profile-wrapper">
                     <button
                         className="profile-card"
-                        onClick={() => setProfileOpen((open) => !open)}
+                        onClick={() =>
+                            setProfileOpen((open) => !open)
+                        }
                     >
                         <div className="avatar">
                             {displayName.charAt(0)}
-
-                            <img
-                                src={statusIcons[activityStatus]}
-                                alt=""
-                                className="avatar-status-icon"
-                            />
                         </div>
+
                         <span>
                             <strong>{displayName}</strong>
+
                             <small className="activity-status">
-                                Status: 
-                                <img
-                                    src={statusIcons[activityStatus]}
-                                    alt=""
-                                    className="status-icon"
+                                Status:
+
+                                <StatusDot
+                                    status={presenceStatus}
                                 />
-                                {activityStatus}
+
+                                {presenceStatus}
                             </small>
                         </span>
                     </button>
 
                     {profileOpen && (
                         <div className="profile-menu">
-                            <button className="menu-item btn-profile">Profile</button>
-
                             <div className="status-submenu">
                                 <button className="menu-item btn-status-trigger">
                                     <span>Status</span>
@@ -310,22 +443,25 @@ function Home() {
                                 </button>
 
                                 <div className="status-options">
-                                    {Object.keys(statusIcons).map((status) => (
+                                    {statuses.map((status) => (
                                         <button
                                             className="menu-item btn-status-option"
                                             key={status}
-                                            onClick={() => handleStatusChange(status)}
+                                            onClick={() =>
+                                                handleStatusChange(status)
+                                            }
                                         >
-                                            <img
-                                                src={statusIcons[status]}
-                                                alt=""
-                                                className="status-icon"
+                                            <StatusDot
+                                                status={status}
                                             />
 
                                             <span>{status}</span>
 
                                             {activityStatus === status && (
-                                                <span className="status-check" aria-label="Selected">
+                                                <span
+                                                    className="status-check"
+                                                    aria-label="Selected"
+                                                >
                                                     ✓
                                                 </span>
                                             )}
@@ -334,7 +470,12 @@ function Home() {
                                 </div>
                             </div>
 
-                            <button className="menu-item btn-log-out" onClick={logOut}>Log Out</button>
+                            <button
+                                className="menu-item btn-log-out"
+                                onClick={logOut}
+                            >
+                                Log Out
+                            </button>
                         </div>
                     )}
                 </div>
@@ -359,22 +500,36 @@ function Home() {
                             <div
                                 className="chats-user-card"
                                 key={user._id}
-                                onClick={() => handleClickToChat(user)}
+                                onClick={() =>
+                                    handleClickToChat(user)
+                                }
                             >
-                                {user.profilePicture ? (
-                                    <img
-                                        className="chats-user-avatar"
-                                        src={user.profilePicture}
-                                        alt={`${user.displayName} profile`}
+                                <div className="chats-user-avatar-wrapper">
+                                    {user.profilePicture ? (
+                                        <img
+                                            className="chats-user-avatar"
+                                            src={user.profilePicture}
+                                            alt={`${user.displayName} profile`}
+                                        />
+                                    ) : (
+                                        <div className="chats-user-avatar chats-user-avatar-fallback">
+                                            {user.displayName
+                                                ?.charAt(0)
+                                                .toUpperCase() || "?"}
+                                        </div>
+                                    )}
+
+                                    <StatusDot
+                                        status={
+                                            userStatuses[user._id] ||
+                                            "Offline"
+                                        }
+                                        className="chats-user-list-status-dot"
                                     />
-                                ) : (
-                                    <div className="chats-user-avatar chats-user-avatar-fallback">
-                                        {user.displayName?.charAt(0).toUpperCase() || "?"}
-                                    </div>
-                                )}
+                                </div>
 
                                 <div className="chats-user-info">
-                                    <span className="chats-display-name">
+                                    <span className="chats-user-display-name">
                                         {user.displayName}
                                     </span>
 
@@ -382,6 +537,14 @@ function Home() {
                                         @{user.username}
                                     </span>
                                 </div>
+
+                                {(unreadCounts[user._id] || 0) > 0 && (
+                                    <span className="unread-badge">
+                                        {formatUnreadCount(
+                                            unreadCounts[user._id]
+                                        )}
+                                    </span>
+                                )}
                             </div>
                         ))}
                     </div>

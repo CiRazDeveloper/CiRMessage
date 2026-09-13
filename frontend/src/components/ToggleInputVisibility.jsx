@@ -1,6 +1,10 @@
+import "./../styles/toggleInputVvisibility.css";
+import "./../styles/input_wrapper.css";
+
+
 import { useState } from "react";
 
-function useToggleInputVisibility() {
+function ToggleInputVisibility() {
     const [showInput, setShowInput] = useState(false);
 
     const toggleVisibility = () => {
@@ -13,4 +17,4 @@ function useToggleInputVisibility() {
     };
 }
 
-export default useToggleInputVisibility;
+export default ToggleInputVisibility;

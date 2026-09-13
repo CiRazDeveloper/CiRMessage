@@ -1,0 +1,28 @@
+:root {
+    --status-dot-online-color: #22c55eff;
+    --status-dot-away-color: #f59e0bff;
+    --status-dot-offline-color: #ff0000ff;
+}
+
+.status-dot {
+    display: inline-block;
+
+    width: 10px;
+    height: 10px;
+
+    border-radius: 50%;
+
+    flex-shrink: 0;
+}
+
+.status-online {
+    background-color: var(--status-dot-online-color);
+}
+
+.status-away {
+    background-color: var(--status-dot-away-color);
+}
+
+.status-offline {
+    background-color: var(--status-dot-offline-color);
+}

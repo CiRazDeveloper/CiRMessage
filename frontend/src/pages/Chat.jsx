@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { axiosInstance } from "../scripts/lib/axios.js";
 import { socket } from "../scripts/lib/socket.js";
-import { statusIcons } from "./../scripts/setStatus.js";
+import StatusDot from "./../components/StatusDot.jsx";
 
 function Chat() {
     const navigate = useNavigate();
@@ -17,13 +17,13 @@ function Chat() {
     
     const [profilePictureUrl, setProfilePictureUrl] = useState(null);
     const [chatPartnerStatus, setChatPartnerStatus] = useState("Offline");
-    const statusKey = chatPartnerStatus.charAt(0).toUpperCase() + chatPartnerStatus.slice(1);
+    const normalizedChatPartnerStatus = (chatPartnerStatus || "Offline").toLowerCase();
     const [messages, setMessages] = useState([]);
     const [messageText, setMessageText] = useState("");
     const [selectedImage, setSelectedImage] = useState(null);
 
 
-    // PROFILE PICTURE
+    // --- PROFILE PICTURE ---
     useEffect(() => {
         let profileUrl;
 
@@ -70,7 +70,7 @@ function Chat() {
     }, [id]);
     
 
-    // STATUS
+    // --- STATUS ---
     useEffect(() => {
         if (!id) {
             return;
@@ -80,9 +80,15 @@ function Chat() {
             "get-user-status",
             id,
             (response) => {
-                setChatPartnerStatus(
-                    response?.status || "offline"
+                const status =
+                    response?.status || "Offline";
+
+                console.log(
+                    "Initial chat partner status:",
+                    status
                 );
+
+                setChatPartnerStatus(status);
             }
         );
 
@@ -90,6 +96,15 @@ function Chat() {
             userId,
             status,
         }) {
+            console.log(
+                "Received user-status-changed:",
+                {
+                    userId,
+                    status,
+                    chatPartnerId: id,
+                }
+            );
+
             if (userId === id) {
                 setChatPartnerStatus(status);
             }
@@ -109,8 +124,95 @@ function Chat() {
     }, [id]);
 
 
-    // MESSAGES AND IMAGES
-        useEffect(() => {
+
+    // --- MESSAGES AND IMAGES ---
+
+    // AUTO RELOAD
+    useEffect(() => {
+        const imageUrls = [];
+
+        async function handleNewMessage(message) {
+            if (
+                message.senderId.toString() !== id
+            ) {
+                return;
+            }
+
+            let receivedMessage = {
+                ...message,
+                isMine: false,
+            };
+
+            if (message.image) {
+                try {
+                    const imageResponse =
+                        await axiosInstance.get(
+                            `/media/message/${message._id}`,
+                            {
+                                responseType: "blob",
+                            }
+                        );
+
+                    const imageUrl =
+                        URL.createObjectURL(
+                            imageResponse.data
+                        );
+
+                    imageUrls.push(imageUrl);
+
+                    receivedMessage = {
+                        ...receivedMessage,
+                        imageUrl,
+                    };
+                } catch (error) {
+                    console.error(
+                        "Could not load received message image:",
+                        error
+                    );
+                }
+            }
+
+            setMessages((previousMessages) => {
+                /*
+                * Prevent accidental duplicates.
+                */
+                const alreadyExists =
+                    previousMessages.some(
+                        (existingMessage) =>
+                            existingMessage._id ===
+                            receivedMessage._id
+                    );
+
+                if (alreadyExists) {
+                    return previousMessages;
+                }
+
+                return [
+                    ...previousMessages,
+                    receivedMessage,
+                ];
+            });
+        }
+
+        socket.on(
+            "new-message",
+            handleNewMessage
+        );
+
+        return () => {
+            socket.off(
+                "new-message",
+                handleNewMessage
+            );
+
+            imageUrls.forEach((url) => {
+                URL.revokeObjectURL(url);
+            });
+        };
+    }, [id]);
+
+    // LOAD
+    useEffect(() => {
         let imageUrls = [];
 
         async function loadMessages() {
@@ -174,12 +276,14 @@ function Chat() {
         };
     }, [id]);
 
+    // SCROLL TO THE BOTTOM
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({
             behavior: "smooth"
         });
     }, [messages]);
 
+    // SEND MESSAGE
     async function handleSendMessage(event) {
         event.preventDefault();
 
@@ -236,6 +340,75 @@ function Chat() {
         }
     }
 
+    // CHECK FOR FIRST CONVO
+    const conversationRequestState = (() => {
+        if (messages.length === 0) {
+            return null;
+        }
+
+        const firstMessage = messages[0];
+
+        if (firstMessage.isMine) {
+            const otherUserHasReplied =
+                messages.some(
+                    (message) => !message.isMine
+                );
+
+            if (!otherUserHasReplied) {
+                return "waiting-for-reply";
+            }
+        } else {
+            const iHaveReplied =
+                messages.some(
+                    (message) => message.isMine
+                );
+
+            if (!iHaveReplied) {
+                return "needs-reply";
+            }
+        }
+
+        return null;
+    })();
+
+    // FORMAT TIME AND DATE
+    function formatMessageTime(date) {
+        return new Date(date).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+    }
+
+    function formatMessageDate(date) {
+        const messageDate = new Date(date);
+        const today = new Date();
+
+        const yesterday = new Date();
+        yesterday.setDate(today.getDate() - 1);
+
+        if (
+            messageDate.toDateString() ===
+            today.toDateString()
+        ) {
+            return "Today";
+        }
+
+        if (
+            messageDate.toDateString() ===
+            yesterday.toDateString()
+        ) {
+            return "Yesterday";
+        }
+
+        return messageDate.toLocaleDateString([], {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+        });
+    }
+
+
+
     return (
         <div className="chat-page">
             <header className="chat-header">
@@ -256,17 +429,16 @@ function Chat() {
                             />
                         ) : (
                             <div className="chat-header-avatar chat-header-avatar-fallback">
-                                {user?.displayName?.charAt(0).toUpperCase() || "?"}
+                                {user?.displayName
+                                    ?.charAt(0)
+                                    .toUpperCase() || "?"}
                             </div>
                         )}
 
-                        {statusIcons[statusKey] && (
-                            <img
-                                src={statusIcons[statusKey]}
-                                alt={chatPartnerStatus}
-                                className="chat-header-status-icon"
-                            />
-                        )}
+                        <StatusDot
+                            status={chatPartnerStatus}
+                            className="chat-header-status-dot"
+                        />
                     </div>
 
                     <div className="chat-header-info">
@@ -281,32 +453,84 @@ function Chat() {
                 </div>
             </header>
 
-            <main className="chat-messages">
-                {messages.map(message => (
-                    <div
-                        className={
-                            message.isMine
-                                ? "message message-sent"
-                                : "message message-received"
-                        }
-                        key={message._id}
-                    >
-                        {message.text && (
-                            <p>{message.text}</p>
-                        )}
+            <div className="chat-messages">
+                {messages.map((message, index) => {
+                    const previousMessage =
+                        index > 0
+                            ? messages[index - 1]
+                            : null;
 
-                        {message.imageUrl && (
-                            <img
-                                src={message.imageUrl}
-                                alt="Message attachment"
-                                className="message-image"
-                            />
-                        )}
-                    </div>
-                ))}
+                    const showDate =
+                        !previousMessage ||
+                        new Date(message.createdAt).toDateString() !==
+                            new Date(previousMessage.createdAt).toDateString();
+
+                    return (
+                        <div
+                            className="message-entry"
+                            key={message._id}
+                        >
+                            {showDate && (
+                                <div className="message-date-separator">
+                                    <span>
+                                        {formatMessageDate(
+                                            message.createdAt
+                                        )}
+                                    </span>
+
+                                    <div className="message-date-line" />
+                                </div>
+                            )}
+
+                            <div
+                                className={
+                                    message.isMine
+                                        ? "message-row message-row-sent"
+                                        : "message-row message-row-received"
+                                }
+                            >
+                                {!message.isMine && (
+                                    <span className="message-time">
+                                        {formatMessageTime(
+                                            message.createdAt
+                                        )}
+                                    </span>
+                                )}
+
+                                <div
+                                    className={
+                                        message.isMine
+                                            ? "message message-sent"
+                                            : "message message-received"
+                                    }
+                                >
+                                    {message.text && (
+                                        <p>{message.text}</p>
+                                    )}
+
+                                    {message.imageUrl && (
+                                        <img
+                                            src={message.imageUrl}
+                                            alt="Message attachment"
+                                            className="message-image"
+                                        />
+                                    )}
+                                </div>
+
+                                {message.isMine && (
+                                    <span className="message-time">
+                                        {formatMessageTime(
+                                            message.createdAt
+                                        )}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
 
                 <div ref={messagesEndRef} />
-            </main>
+            </div>
 
             {selectedImage && (
                 <div className="selected-image-info">
@@ -321,13 +545,40 @@ function Chat() {
                 </div>
             )}
 
+            {conversationRequestState ===
+                "waiting-for-reply" && (
+                <div className="chat-message-request-info">
+                    You can send only one message until this
+                    user replies to you.
+                </div>
+            )}
+
+            {conversationRequestState ===
+                "needs-reply" && (
+                <div className="chat-message-request-info">
+                    Once you reply to this user, they’ll be
+                    able to continue the conversation. Until
+                    then, they can’t send you any more
+                    messages.
+                </div>
+            )}
+
             <form className="chat-input-area" onSubmit={handleSendMessage}>
-                <label className="chat-image-button">
+                <label
+                    className={`chat-image-button ${
+                        conversationRequestState === "waiting-for-reply"
+                            ? "disabled"
+                            : ""
+                    }`}
+                >
                     +
                     <input
                         type="file"
                         accept="image/*"
                         hidden
+                        disabled={
+                            conversationRequestState === "waiting-for-reply"
+                        }
                         onChange={(event) => {
                             setSelectedImage(
                                 event.target.files?.[0] || null
@@ -338,8 +589,15 @@ function Chat() {
 
                 <input
                     type="text"
-                    placeholder={`Message ${user?.displayName || ""}`}
+                    placeholder={
+                        conversationRequestState === "waiting-for-reply"
+                            ? "Waiting for this user to reply..."
+                            : `Message ${user?.displayName || ""}`
+                    }
                     value={messageText}
+                    disabled={
+                        conversationRequestState === "waiting-for-reply"
+                    }
                     onChange={(event) =>
                         setMessageText(event.target.value)
                     }
@@ -348,7 +606,10 @@ function Chat() {
                 <button
                     type="submit"
                     className="chat-send-button"
-                    disabled={!messageText.trim() && !selectedImage}
+                    disabled={
+                        conversationRequestState === "waiting-for-reply" ||
+                        (!messageText.trim() && !selectedImage)
+                    }
                     aria-label="Send message"
                 >
                     <img

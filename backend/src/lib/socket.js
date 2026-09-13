@@ -4,10 +4,22 @@ import jwt from "jsonwebtoken";
 
 import mod_user from "../models/mod_user.js";
 
+let io;
+
+export const getIO = () => {
+    if (!io) {
+        throw new Error(
+            "Socket.IO has not been initialized"
+        );
+    }
+
+    return io;
+};
+
 export const initializeSocket = (server) => {
     const userPresence = new Map();
 
-    const io = new Server(server, {
+    io = new Server(server, {
         cors: {
             origin: process.env.CLIENT_URL,
             credentials: true,
@@ -67,6 +79,8 @@ export const initializeSocket = (server) => {
     // --- SOCKET CONNECTION ---
     io.on("connection", (socket) => {
         const userId = socket.user._id.toString();
+
+        socket.join(`user:${userId}`);
 
         let presence = userPresence.get(userId);
 

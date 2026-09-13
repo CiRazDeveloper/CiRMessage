@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { saveUser } from "../storage.js";
 
-import toggleInputVisibility from "../components/Toggle_Input_Visibility.jsx";
+import toggleInputVisibility from "../components/ToggleInputVisibility.jsx";
 
 function Signup() {
     const navigate = useNavigate();

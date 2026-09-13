@@ -1,6 +1,3 @@
-@import "./input_wrapper.css";
-@import "./toggle_input_visibility.css";
-
 :root {
     /* PRIVATE */
     --private-background-color: #0f172aff;
@@ -13,21 +10,65 @@
     --private-card-background-color: #1c48c2;
 
     /* LEFT SIDEBAR */
-    --left-sidebar-border-right-color: #ffffffff;
+    --private-left-sidebar-border-right-color: #ffffffff;
 
-    /* STATUS DOT */
-    --status-dot-standard-color: #9ca3afff;
-    --status-dot-online-color: #22c55eff;
-    --status-dot-away-color: #f59e0bff;
-    --status-dot-offline-color: #ff0000ff;
-
+    /* PROFILE */
+    --private-avatar-size: 42px;
 }
 
-.home-container {
+
+
+/* GENERAL */
+.home-page {
     background: #f5f7fb;
     min-height: 100vh;
     display: flex;
     color: #172033;
+}
+
+.status-dot {
+    display: inline-block;
+
+    width: 10px;
+    height: 10px;
+
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.status-online {
+    background-color: var(--status-dot-online-color);
+}
+
+.status-away {
+    background-color: var(--status-dot-away-color);
+}
+
+.status-offline {
+    background-color: var(--status-dot-offline-color);
+}
+
+.unread-badge {
+    margin-left: auto;
+
+    min-width: 22px;
+    height: 22px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0 6px;
+
+    border-radius: 999px;
+
+    background-color: #ff0000;
+    color: #ffffff;
+
+    font-size: 12px;
+    font-weight: bold;
+
+    flex-shrink: 0;
 }
 
 
@@ -68,17 +109,21 @@
     display: flex;
     flex-direction: column;
     padding: 24px 16px;
-    border-right: 1px solid var(--left-sidebar-border-right-color);
+    border-right: 1px solid var(--private-left-sidebar-border-right-color);
 }
 
-.left-sidebar-nav {
+.left-sidebar .nav {
     display: grid;
     gap: 6px;
 }
 
-.left-sidebar-nav button {
+.left-sidebar .nav button {
     background: transparent;
     color: var(--private-text-color);
+
+    display: flex;
+    gap: 12px;
+    padding: 12px;
 
     border: 0;
     border-radius: 9px;
@@ -87,17 +132,18 @@
     text-align: left;
 }
 
-.left-sidebar-nav button {
-    display: flex;
-    gap: 12px;
-    padding: 12px;
-}
-
-.left-sidebar-nav button:hover,
-.left-sidebar-nav button.active {
+.left-sidebar .nav button:hover,
+.left-sidebar .nav button.active {
     background: var(--private-button-hover-color);
 }
 
+.left-sidebar .nav .nav-icon {
+    font-size: 20px;
+}
+
+.left-sidebar .nav .nav-label {
+    font-size: inherit;
+}
 
 
 
@@ -121,10 +167,24 @@
 }
 
 .profile-card .avatar {
+    display: grid;
+    place-items: center;
+
+    width: var(--private-avatar-size);
+    height: var(--private-avatar-size);
+
+    flex-shrink: 0;
+
+    border-radius: 50%;
+
+    background-color: var(--private-card-background-color);
     color: var(--private-text-color);
+
+    font-weight: bold;
+    font-size: 20px;
 }
 
-.profile-card .avatar-status-icon {
+.profile-card .avatar-status-dot {
     display: none;
 }
 
@@ -236,24 +296,10 @@
     font-weight: bold;
 }
 
-.status-dot {
-    background-color: var(--status-dot-standard-color);
-
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-}
-
 .activity-status {
     display: flex;
     align-items: center;
     gap: 5px;
-}
-
-.status-icon {
-    width: 10px;
-    height: 10px;
 }
 
 
@@ -293,9 +339,18 @@
     background-color: var(--private-button-hover-color);
 }
 
+.chats-user-avatar-wrapper {
+    position: relative;
+
+    width: 42px;
+    height: 42px;
+
+    flex-shrink: 0;
+}
+
 .chats-user-avatar {
-    width: 50px;
-    height: 50px;
+    width: 42px;
+    height: 42px;
 
     border-radius: 50%;
     object-fit: cover;
@@ -312,6 +367,32 @@
 
     font-size: 20px;
     font-weight: bold;
+}
+
+.chats-user-list-status-dot {
+    position: absolute;
+
+    right: -1px;
+    bottom: -1px;
+
+    width: 12px;
+    height: 12px;
+
+    border: 2px solid var(--private-background-color);
+
+    box-sizing: content-box;
+}
+
+.chats-user-list-status-dot.status-online {
+    background-color: var(--status-dot-online-color);
+}
+
+.chats-user-list-status-dot.status-away {
+    background-color: var(--status-dot-away-color);
+}
+
+.chats-user-list-status-dot.status-offline {
+    background-color: var(--status-dot-offline-color);
 }
 
 .chats-user-info {
@@ -372,8 +453,8 @@
 }
 
 .search-user-avatar {
-    width: 50px;
-    height: 50px;
+    width: 42px;
+    height: 42px;
 
     border-radius: 50%;
     object-fit: cover;
@@ -495,12 +576,12 @@
         align-items: center;
 
         border-right: 0;
-        border-top: 1px solid var(--left-sidebar-border-right-color);
+        border-top: 1px solid var(--private-left-sidebar-border-right-color);
 
         box-sizing: border-box;
     }
 
-    .left-sidebar-nav {
+    .left-sidebar .nav {
         display: flex;
         align-items: center;
         justify-content: space-around;
@@ -509,26 +590,19 @@
         height: 100%;
     }
 
-    .left-sidebar-nav button {
-        flex: 1;
-
+    .left-sidebar .nav button {
         display: flex;
-        flex-direction: column;
         align-items: center;
-        justify-content: center;
+        gap: 10px;
 
-        gap: 3px;
-        padding: 6px;
-
-        text-align: center;
-        font-size: 12px;
+        padding: 8px 10px;
     }
 
-    .left-sidebar-nav button > span {
+    .left-sidebar .nav button > span {
         font-size: 20px;
     }
 
-    
+
 
     /* PROFILE */
     .profile-wrapper {
@@ -552,35 +626,20 @@
         display: none;
     }
 
-    .profile-card .avatar {
+    .profile-card.avatar {
         position: relative;
 
         display: grid;
         place-items: center;
 
-        width: 40px;
-        height: 40px;
+        width: var(--private-avatar-size);
+        height: var(--private-avatar-size);
 
         border-radius: 50%;
         background-color: var(--private-card-background-color);
         color: var(--private-text-color);
 
         font-weight: bold;
-    }
-
-    .profile-card .avatar-status-icon {
-        display: block;
-
-        position: absolute;
-        right: -1px;
-        bottom: -1px;
-
-        width: 12px;
-        height: 12px;
-
-        border-radius: 50%;
-        border: 2px solid var(--private-background-color);
-        box-sizing: content-box;
     }
 
     .profile-menu {

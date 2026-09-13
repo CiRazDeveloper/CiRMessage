@@ -8,9 +8,10 @@ export const getActiveChats = async (req, res) => {
 
         const messages = await mod_message.find({
             $or: [
-                { senderId: loggedInUserId }, {receiverId: loggedInUserId }
+                { senderId: loggedInUserId },
+                { receiverId: loggedInUserId }
             ],
-        })
+        });
 
         const activeChatUsersIds = [
             ...new Set(
@@ -22,16 +23,66 @@ export const getActiveChats = async (req, res) => {
             ),
         ];
 
-        const activeChatUsers = await mod_user.find({ _id: { $in: activeChatUsersIds } }).select("-password");
+        const activeChatUsers = await mod_user
+            .find({
+                _id: {
+                    $in: activeChatUsersIds
+                }
+            })
+            .select("-password")
+            .lean();
+
+        const unreadMessages = await mod_message.aggregate([
+            {
+                $match: {
+                    receiverId: loggedInUserId,
+                    read: false
+                }
+            },
+            {
+                $group: {
+                    _id: "$senderId",
+                    unreadCount: {
+                        $sum: 1
+                    }
+                }
+            }
+        ]);
+
+        const unreadCountMap = {};
+
+        unreadMessages.forEach((entry) => {
+            unreadCountMap[
+                entry._id.toString()
+            ] = entry.unreadCount;
+        });
+
+        const chatsWithUnreadCount =
+            activeChatUsers.map((user) => ({
+                ...user,
+                unreadCount:
+                    unreadCountMap[
+                        user._id.toString()
+                    ] || 0
+            }));
 
         return res
-            .status(STATUS_CODES.INFO.WEB_OK)
-            .json(activeChatUsers);
+            .status(
+                STATUS_CODES.INFO.WEB_OK
+            )
+            .json(chatsWithUnreadCount);
     } catch (error) {
-        console.error("Error in getActiveChats:", error);
+        console.error(
+            "Error in getActiveChats:",
+            error
+        );
 
         return res
-            .status(STATUS_CODES.ERROR.SERVER_INTERNAL_ERROR)
-            .json({ message: "Internal Server Error" });
+            .status(
+                STATUS_CODES.ERROR.SERVER_INTERNAL_ERROR
+            )
+            .json({
+                message: "Internal Server Error"
+            });
     }
 };

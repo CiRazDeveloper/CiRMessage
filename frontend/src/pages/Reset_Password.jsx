@@ -4,7 +4,7 @@ import { axiosInstance } from "../scripts/lib/axios.js";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-import toggleInputVisibility from "../components/Toggle_Input_Visibility.jsx";
+import toggleInputVisibility from "../components/ToggleInputVisibility.jsx";
 
 function Reset_Password() {
     const navigate = useNavigate();

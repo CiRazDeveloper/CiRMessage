@@ -5,7 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { axiosInstance } from "../scripts/lib/axios.js";
 import { saveUser } from "../storage.js";
 
-import toggleInputVisibility from "../components/Toggle_Input_Visibility.jsx";
+import toggleInputVisibility from "../components/ToggleInputVisibility.jsx";
 
 function Login() {
     const navigate = useNavigate();
