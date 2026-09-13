@@ -24,6 +24,17 @@ function SocketConnection() {
             );
         }
 
+        function handleNewMessage(message) {
+            if (!message?._id) {
+                return;
+            }
+
+            socket.emit(
+                "message-delivered",
+                message._id
+            );
+        }
+
         socket.on(
             "connect",
             handleConnect
@@ -37,6 +48,11 @@ function SocketConnection() {
         socket.on(
             "connect_error",
             handleConnectError
+        );
+
+        socket.on(
+            "new-message",
+            handleNewMessage
         );
 
         if (!socket.connected) {
@@ -57,6 +73,11 @@ function SocketConnection() {
             socket.off(
                 "connect_error",
                 handleConnectError
+            );
+
+            socket.off(
+                "new-message",
+                handleNewMessage
             );
         };
     }, []);

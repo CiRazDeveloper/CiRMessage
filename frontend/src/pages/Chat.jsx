@@ -11,16 +11,17 @@ function Chat() {
     const location = useLocation();
     const { id } = useParams();
 
-    const messagesEndRef = useRef(null);
     const user = location.state?.user;
-    
     
     const [profilePictureUrl, setProfilePictureUrl] = useState(null);
     const [chatPartnerStatus, setChatPartnerStatus] = useState("Offline");
-    const normalizedChatPartnerStatus = (chatPartnerStatus || "Offline").toLowerCase();
     const [messages, setMessages] = useState([]);
     const [messageText, setMessageText] = useState("");
     const [selectedImage, setSelectedImage] = useState(null);
+    const messagesEndRef = useRef(null);
+    const messageInputRef = useRef(null);
+    const deliveredMessageIdsRef =
+        useRef(new Set());
 
 
     // --- PROFILE PICTURE ---
@@ -138,9 +139,15 @@ function Chat() {
                 return;
             }
 
+            socket.emit(
+                "mark-messages-read",
+                message.senderId
+            );
+
             let receivedMessage = {
                 ...message,
                 isMine: false,
+                read: true
             };
 
             if (message.image) {
@@ -259,6 +266,11 @@ function Chat() {
                 );
 
                 setMessages(loadedMessages);
+
+                socket.emit(
+                    "mark-messages-read",
+                    id
+                );
             } catch (error) {
                 console.error(
                     "Could not load messages:",
@@ -309,6 +321,18 @@ function Chat() {
 
             const newMessage = response.data;
 
+            if (
+                deliveredMessageIdsRef.current.has(
+                    newMessage._id
+                )
+            ) {
+                newMessage.delivered = true;
+
+                deliveredMessageIdsRef.current.delete(
+                    newMessage._id
+                );
+            }
+
             if (newMessage.image) {
                 try {
                     const imageResponse = await axiosInstance.get(
@@ -335,10 +359,95 @@ function Chat() {
 
             setMessageText("");
             setSelectedImage(null);
+
+            if (messageInputRef.current) {
+                messageInputRef.current.style.height = "auto";
+                messageInputRef.current.style.overflowY =
+                    "hidden";
+            }
         } catch (error) {
             console.error("Could not send message:", error);
         }
     }
+
+    // CHECK FOR DELIVERED
+    useEffect(() => {
+        function handleMessageDelivered({
+            messageId,
+        }) {
+            deliveredMessageIdsRef.current.add(
+                messageId
+            );
+
+            setMessages((previous) =>
+                previous.map((message) => {
+                    if (
+                        message._id !== messageId
+                    ) {
+                        return message;
+                    }
+
+                    return {
+                        ...message,
+                        delivered: true,
+                    };
+                })
+            );
+        }
+
+        socket.on(
+            "message-delivered",
+            handleMessageDelivered
+        );
+
+        return () => {
+            socket.off(
+                "message-delivered",
+                handleMessageDelivered
+            );
+        };
+    }, []);
+
+    // CHECK FOR SEEN
+    useEffect(() => {
+        function handleMessagesSeen({
+            seenBy,
+        }) {
+            if (seenBy !== id) {
+                return;
+            }
+
+            setMessages((previous) =>
+                previous.map((message) => {
+                    if (!message.isMine) {
+                        return message;
+                    }
+
+                    return {
+                        ...message,
+                        read: true,
+                    };
+                })
+            );
+        }
+
+        socket.on(
+            "messages-seen",
+            handleMessagesSeen
+        );
+
+        return () => {
+            socket.off(
+                "messages-seen",
+                handleMessagesSeen
+            );
+        };
+    }, [id]);
+
+    const lastSentMessageIndex =
+    messages.findLastIndex(
+        (message) => message.isMine
+    );
 
     // CHECK FOR FIRST CONVO
     const conversationRequestState = (() => {
@@ -500,21 +609,40 @@ function Chat() {
                                 <div
                                     className={
                                         message.isMine
-                                            ? "message message-sent"
-                                            : "message message-received"
+                                            ? "message-content-wrapper message-content-wrapper-sent"
+                                            : "message-content-wrapper"
                                     }
                                 >
-                                    {message.text && (
-                                        <p>{message.text}</p>
-                                    )}
+                                    <div
+                                        className={
+                                            message.isMine
+                                                ? "message message-sent"
+                                                : "message message-received"
+                                        }
+                                    >
+                                        {message.text && (
+                                            <p>{message.text}</p>
+                                        )}
 
-                                    {message.imageUrl && (
-                                        <img
-                                            src={message.imageUrl}
-                                            alt="Message attachment"
-                                            className="message-image"
-                                        />
-                                    )}
+                                        {message.imageUrl && (
+                                            <img
+                                                src={message.imageUrl}
+                                                alt="Message attachment"
+                                                className="message-image"
+                                            />
+                                        )}
+                                    </div>
+
+                                    {message.isMine &&
+                                        index === lastSentMessageIndex && (
+                                            <span className="message-status">
+                                                {message.read
+                                                    ? "Seen"
+                                                    : message.delivered
+                                                        ? "Delivered"
+                                                        : "Sent"}
+                                            </span>
+                                        )}
                                 </div>
 
                                 {message.isMine && (
@@ -587,21 +715,59 @@ function Chat() {
                     />
                 </label>
 
-                <input
-                    type="text"
-                    placeholder={
-                        conversationRequestState === "waiting-for-reply"
-                            ? "Waiting for this user to reply..."
-                            : `Message ${user?.displayName || ""}`
-                    }
-                    value={messageText}
-                    disabled={
-                        conversationRequestState === "waiting-for-reply"
-                    }
-                    onChange={(event) =>
-                        setMessageText(event.target.value)
-                    }
-                />
+                <div className="chat-message-input-wrapper">
+                    <textarea
+                        ref={messageInputRef}
+                        className="chat-message-input"
+                        placeholder={
+                            conversationRequestState === "waiting-for-reply"
+                                ? "Waiting for this user to reply..."
+                                : `Message ${user?.displayName || ""}`
+                        }
+                        value={messageText}
+                        disabled={
+                            conversationRequestState === "waiting-for-reply"
+                        }
+                        rows={1}
+                        maxLength={2000}
+                        onChange={(event) => {
+                            setMessageText(event.target.value);
+
+                            const textarea = event.target;
+
+                            textarea.style.height = "auto";
+
+                            const lineHeight = 22;
+                            const maxRows = 5;
+                            const verticalPadding = 20;
+
+                            const maxHeight =
+                                lineHeight * maxRows +
+                                verticalPadding;
+
+                            textarea.style.height =
+                                `${Math.min(
+                                    textarea.scrollHeight,
+                                    maxHeight
+                                )}px`;
+
+                            textarea.style.overflowY =
+                                textarea.scrollHeight > maxHeight
+                                    ? "auto"
+                                    : "hidden";
+                        }}
+                    />
+
+                    <span
+                        className={`chat-character-count ${
+                            messageText.length >= 1900
+                                ? "near-limit"
+                                : ""
+                        }`}
+                    >
+                        {messageText.length}/2000
+                    </span>
+                </div>
 
                 <button
                     type="submit"

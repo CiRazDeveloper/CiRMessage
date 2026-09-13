@@ -2,6 +2,7 @@ import { Server } from "socket.io";
 import { parse } from "cookie";
 import jwt from "jsonwebtoken";
 
+import mod_message from "../models/mod_message.js";
 import mod_user from "../models/mod_user.js";
 
 let io;
@@ -87,7 +88,7 @@ export const initializeSocket = (server) => {
         if (!presence) {
             presence = {
                 sockets: new Set(),
-                status: "online",
+                status: "Online",
             };
 
             userPresence.set(userId, presence);
@@ -152,6 +153,112 @@ export const initializeSocket = (server) => {
             });
         });
 
+       socket.on("message-delivered", async (messageId, callback) => {
+                try {
+                    const receiverId =
+                        socket.user._id.toString();
+
+                    const message =
+                        await mod_message.findOneAndUpdate(
+                            {
+                                _id: messageId,
+                                receiverId,
+                                delivered: false,
+                            },
+                            {
+                                $set: {
+                                    delivered: true,
+                                },
+                            },
+                            {
+                                new: true,
+                            }
+                        );
+
+                    if (!message) {
+                        callback?.({
+                            success: false,
+                            message:
+                                "Message not found or not allowed",
+                        });
+
+                        return;
+                    }
+
+                    io.to(
+                        `user:${message.senderId.toString()}`
+                    ).emit(
+                        "message-delivered",
+                        {
+                            messageId:
+                                message._id.toString(),
+                        }
+                    );
+
+                    callback?.({
+                        success: true,
+                    });
+                } catch (error) {
+                    console.error(
+                        "Could not mark message as delivered:",
+                        error
+                    );
+
+                    callback?.({
+                        success: false,
+                    });
+                }
+            }
+        );
+
+        socket.on("mark-messages-read", async (senderId, callback) => {
+                try {
+                    const receiverId =
+                        socket.user._id;
+
+                    const result =
+                        await mod_message.updateMany(
+                            {
+                                senderId,
+                                receiverId,
+                                read: false,
+                            },
+                            {
+                                $set: {
+                                    delivered: true,
+                                    read: true,
+                                },
+                            }
+                        );
+
+                    io.to(
+                        `user:${senderId}`
+                    ).emit(
+                        "messages-seen",
+                        {
+                            seenBy:
+                                receiverId.toString(),
+                        }
+                    );
+
+                    callback?.({
+                        success: true,
+                        modifiedCount:
+                            result.modifiedCount,
+                    });
+                } catch (error) {
+                    console.error(
+                        "Could not mark messages as read:",
+                        error
+                    );
+
+                    callback?.({
+                        success: false,
+                    });
+                }
+            }
+        );
+
         socket.on("get-user-status", (targetUserId, callback) => {
                 const targetPresence =
                     userPresence.get(targetUserId);
@@ -161,7 +268,7 @@ export const initializeSocket = (server) => {
                     targetPresence.sockets.size === 0
                 ) {
                     callback({
-                        status: "offline",
+                        status: "Offline",
                     });
 
                     return;

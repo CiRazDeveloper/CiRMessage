@@ -14,6 +14,7 @@ export const getMessagesByUserId = async (req, res) => {
             },
             {
                 $set: {
+                    delivered: true,
                     read: true,
                 },
             }

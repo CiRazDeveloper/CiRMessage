@@ -8,7 +8,6 @@ import { socket } from "../scripts/lib/socket.js";
 import { getDisplayName } from "./../storage.js";
 import { setStatus, statuses } from "./../scripts/setStatus.js";
 import StatusDot from "./../components/StatusDot.jsx";
-
 import SwitchButton from "../components/SwitchButton.jsx";
 
 function Home() {
@@ -45,38 +44,9 @@ function Home() {
     useEffect(() => {        
         if (activePage === "search") {
             console.log("Loading contacts...");
-    
-            async function loadContacts() {
-                try {
-                    const response = await axiosInstance.get("/messages/contacts");
-                    setContacts(response.data);
-                } catch (error) {
-                    console.error("Could not load contacts: ", error);
-                }
-            }
-    
             loadContacts();
         } else if (activePage === "chats") {
             console.log("Loading chats...");
-
-            async function loadChats() {
-                try {
-                    const response = await axiosInstance.get("/messages/chats");
-
-                    setChats(response.data);
-
-                    const counts = {};
-
-                    response.data.forEach((user) => {
-                        counts[user._id] =
-                            user.unreadCount || 0;
-                    });
-
-                    setUnreadCounts(counts);
-                } catch (error) {
-                    console.error("Could not load chats: ", error);
-                }
-            }
 
             loadChats();
         }
@@ -85,6 +55,24 @@ function Home() {
 
 
     // --- SEARCH ---
+    async function loadContacts() {
+        try {
+            const response =
+                await axiosInstance.get(
+                    "/messages/contacts"
+                );
+
+            setContacts(
+                response.data
+            );
+        } catch (error) {
+            console.error(
+                "Could not load contacts:",
+                error
+            );
+        }
+    }
+
     const searchValue = userSearch
         .trim()
         .replace(/^@/, "")
@@ -96,6 +84,32 @@ function Home() {
 
 
     // --- CHATS ---
+    // LOAD
+    async function loadChats() {
+        try {
+            const response =
+                await axiosInstance.get(
+                    "/messages/chats"
+                );
+
+            setChats(response.data);
+
+            const counts = {};
+
+            response.data.forEach((user) => {
+                counts[user._id] =
+                    user.unreadCount || 0;
+            });
+
+            setUnreadCounts(counts);
+        } catch (error) {
+            console.error(
+                "Could not load chats:",
+                error
+            );
+        }
+    }
+
     // OTHERS STATUS
     useEffect(() => {
         chats.forEach((user) => {
@@ -159,10 +173,51 @@ function Home() {
         0
     );
 
-
     function formatUnreadCount(count) {
         return count >= 99 ? "+99" : count;
     }
+
+    // NEW MESSAGE
+    useEffect(() => {
+        function handleNewMessage(message) {
+            const senderId =
+                message.senderId?.toString();
+
+            if (!senderId) {
+                return;
+            }
+
+            const existingChat = chats.some(
+                (chat) =>
+                    chat._id.toString() ===
+                    senderId
+            );
+
+            if (existingChat) {
+                setUnreadCounts((previous) => ({
+                    ...previous,
+                    [senderId]:
+                        (previous[senderId] || 0) + 1,
+                }));
+
+                return;
+            }
+
+            loadChats();
+        }
+
+        socket.on(
+            "new-message",
+            handleNewMessage
+        );
+
+        return () => {
+            socket.off(
+                "new-message",
+                handleNewMessage
+            );
+        };
+    }, [chats]);
     
 
     
@@ -346,9 +401,7 @@ function Home() {
         setIsOn(newValue);
 
         if (newValue) {
-            console.log("Account is now private");
         } else {
-            console.log("Account is now public");
         }
     };
 
@@ -605,11 +658,11 @@ function Home() {
                     <h1>Settings</h1>
 
                     <div className="settings-card account">
-                        <h2>Account</h2>
-                        <p>Additional account settings will appear here.</p>
+                        <h2>Nothing</h2>
+                        <p>Nothing here yet.</p>
                         
                         <div className="settings-card privacy">
-                            <span>Set Private</span>
+                            <span>Set Nothing</span>
                             <div className="switch-container">
                                 <SwitchButton
                                     checked={isOn}
