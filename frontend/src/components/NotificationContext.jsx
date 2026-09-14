@@ -13,11 +13,7 @@ export function NotificationProvider({
     const [notifications, setNotifications] =
         useState([]);
 
-    function showNotification(
-        message,
-        type = "info",
-        duration = 4000
-    ) {
+    function showNotification(message, type = "info") {
         const id = crypto.randomUUID();
 
         setNotifications((previous) => [
@@ -28,12 +24,6 @@ export function NotificationProvider({
                 type,
             },
         ]);
-
-        if (duration > 0) {
-            setTimeout(() => {
-                removeNotification(id);
-            }, duration);
-        }
 
         return id;
     }

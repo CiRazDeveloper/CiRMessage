@@ -14,13 +14,25 @@ function NotificationContainer() {
                 (notification) => (
                     <div
                         key={notification.id}
+                        role="alertdialog"
+                        aria-modal="true"
                         className={
                             `notification notification-${notification.type}`
                         }
                     >
-                        <span>
-                            {notification.message}
-                        </span>
+                        <div className="notification-content">
+                            <strong className="notification-title">
+                                {notification.type === "error"
+                                    ? "Something went wrong"
+                                    : notification.type === "success"
+                                        ? "Success"
+                                        : notification.type === "warning"
+                                            ? "Please note"
+                                            : "Information"}
+                            </strong>
+
+                            <span>{notification.message}</span>
+                        </div>
 
                         <button
                             type="button"
@@ -29,9 +41,9 @@ function NotificationContainer() {
                                     notification.id
                                 )
                             }
-                            aria-label="Close notification"
+                            aria-label="Dismiss notification"
                         >
-                            ×
+                            Dismiss
                         </button>
                     </div>
                 )

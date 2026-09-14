@@ -1,7 +1,9 @@
 import express from "express";
 
 import { protectRoute } from "../middlewares/mid_auth.js";
-import upload from "../middlewares/mid_upload.js";
+import upload, {
+    handleUploadError,
+} from "../middlewares/mid_upload.js";
 
 import { getProfileMedia } from "../controllers/media/get_media_controller.js";
 import { postMedia } from "../controllers/media/post_media_controller.js";
@@ -16,6 +18,7 @@ router.post(
     "/post",
     protectRoute,
     upload.single("profilePicture"),
+    handleUploadError,
     postMedia
 );
 
