@@ -8,7 +8,7 @@ Then configure the app with the npm commands "run build/start".
 The file contains the following:
 
 \#  --- Express ---  
-PORT = 1001
+PORT = 2205
 
 \# --- Dev ---  
 NODE_ENV = production
