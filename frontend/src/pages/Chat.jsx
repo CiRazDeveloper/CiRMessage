@@ -743,7 +743,7 @@ function Chat() {
 
             <form className="chat-input-area" onSubmit={handleSendMessage}>
                 <label
-                    className={`.chat-media-button ${
+                    className={`chat-media-button ${
                         conversationRequestState === "waiting-for-reply"
                             ? "disabled"
                             : ""
@@ -760,8 +760,7 @@ function Chat() {
                         }
                         onChange={(event) => {
                             setSelectedMedia(
-                                event.target.files?.[0] ||
-                                    null
+                                event.target.files?.[0] || null
                             );
                         }}
                     />
