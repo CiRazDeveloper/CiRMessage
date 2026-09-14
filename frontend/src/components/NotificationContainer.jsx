@@ -14,8 +14,7 @@ function NotificationContainer() {
                 (notification) => (
                     <div
                         key={notification.id}
-                        role="alertdialog"
-                        aria-modal="true"
+                        role="alert"
                         className={
                             `notification notification-${notification.type}`
                         }
