@@ -50,40 +50,70 @@ export const deleteProfileMedia = async (req, res) => {
 
 export const deleteMessageMedia = async (req, res) => {
     try {
-        const message = await mod_message.findById(req.params.messageId);
+        const message = await mod_message.findById(
+            req.params.messageId
+        );
 
-        if (!message || !message.image) {
+        if (!message || !message.media) {
             return res
-                .status(STATUS_CODES.ERROR.WEB_NOT_FOUND)
-                .json({ message: "Message image not found" });
+                .status(
+                    STATUS_CODES.ERROR.WEB_NOT_FOUND
+                )
+                .json({
+                    message: "Message media not found"
+                });
         }
 
-        if (message.senderId.toString() !== req.user._id.toString()) {
+        if (
+            message.senderId.toString() !==
+            req.user._id.toString()
+        ) {
             return res
-                .status(STATUS_CODES.ERROR.WEB_UNAUTHORIZED)
-                .json({ message: "Only the sender can delete this image" });
+                .status(
+                    STATUS_CODES.ERROR.WEB_UNAUTHORIZED
+                )
+                .json({
+                    message:
+                        "Only the sender can delete this media"
+                });
         }
 
-        const imageKey = message.image;
+        const mediaKey = message.media;
 
         await minioClient.send(
             new DeleteObjectCommand({
                 Bucket: process.env.MINIO_BUCKET,
-                Key: imageKey,
+                Key: mediaKey,
             })
         );
 
-        message.image = undefined;
+        message.media = undefined;
+        message.mediaType = undefined;
+        message.mediaMimeType = undefined;
+
         await message.save();
 
         return res
-            .status(STATUS_CODES.INFO.WEB_OK)
-            .json({ message: "Message image deleted successfully" });
+            .status(
+                STATUS_CODES.INFO.WEB_OK
+            )
+            .json({
+                message:
+                    "Message media deleted successfully"
+            });
     } catch (error) {
-        console.error("deleteMessageMedia error:", error);
+        console.error(
+            "deleteMessageMedia error:",
+            error
+        );
 
         return res
-            .status(STATUS_CODES.ERROR.SERVER_INTERNAL_ERROR)
-            .json({ message: "Failed to delete message image" });
+            .status(
+                STATUS_CODES.ERROR.SERVER_INTERNAL_ERROR
+            )
+            .json({
+                message:
+                    "Failed to delete message media"
+            });
     }
 };

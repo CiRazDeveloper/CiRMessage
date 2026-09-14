@@ -52,7 +52,7 @@ function Reset_Password() {
                     <div className="input-wrapper">
                         <input
                             type="text"
-                            placeholder="Username or Email"
+                            placeholder="Email or Username"
                             value={identifier}
                             onChange={(event) => setIdentifier(event.target.value)}
                         />

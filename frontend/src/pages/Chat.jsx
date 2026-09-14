@@ -17,7 +17,7 @@ function Chat() {
     const [chatPartnerStatus, setChatPartnerStatus] = useState("Offline");
     const [messages, setMessages] = useState([]);
     const [messageText, setMessageText] = useState("");
-    const [selectedImage, setSelectedImage] = useState(null);
+    const [selectedMedia, setSelectedMedia] = useState(null);
     const messagesEndRef = useRef(null);
     const messageInputRef = useRef(null);
     const deliveredMessageIdsRef = useRef(new Set());
@@ -130,7 +130,7 @@ function Chat() {
 
     // AUTO RELOAD
     useEffect(() => {
-        const imageUrls = [];
+        const mediaUrls = [];
 
         async function handleNewMessage(message) {
             if (
@@ -147,12 +147,12 @@ function Chat() {
             let receivedMessage = {
                 ...message,
                 isMine: false,
-                read: true
+                read: true,
             };
 
-            if (message.image) {
+            if (message.media) {
                 try {
-                    const imageResponse =
+                    const mediaResponse =
                         await axiosInstance.get(
                             `/media/message/${message._id}`,
                             {
@@ -160,29 +160,26 @@ function Chat() {
                             }
                         );
 
-                    const imageUrl =
+                    const mediaUrl =
                         URL.createObjectURL(
-                            imageResponse.data
+                            mediaResponse.data
                         );
 
-                    imageUrls.push(imageUrl);
+                    mediaUrls.push(mediaUrl);
 
                     receivedMessage = {
                         ...receivedMessage,
-                        imageUrl,
+                        mediaUrl,
                     };
                 } catch (error) {
                     console.error(
-                        "Could not load received message image:",
+                        "Could not load received message media:",
                         error
                     );
                 }
             }
 
             setMessages((previousMessages) => {
-                /*
-                * Prevent accidental duplicates.
-                */
                 const alreadyExists =
                     previousMessages.some(
                         (existingMessage) =>
@@ -212,7 +209,7 @@ function Chat() {
                 handleNewMessage
             );
 
-            imageUrls.forEach((url) => {
+            mediaUrls.forEach((url) => {
                 URL.revokeObjectURL(url);
             });
         };
@@ -220,50 +217,57 @@ function Chat() {
 
     // LOAD
     useEffect(() => {
-        let imageUrls = [];
+        let mediaUrls = [];
 
         async function loadMessages() {
             try {
-                const response = await axiosInstance.get(
-                    `/messages/${id}`
-                );
+                const response =
+                    await axiosInstance.get(
+                        `/messages/${id}`
+                    );
 
-                const loadedMessages = await Promise.all(
-                    response.data.map(async (message) => {
-                        if (!message.image) {
-                            return message;
-                        }
+                const loadedMessages =
+                    await Promise.all(
+                        response.data.map(
+                            async (message) => {
+                                if (!message.media) {
+                                    return message;
+                                }
 
-                        try {
-                            const imageResponse =
-                                await axiosInstance.get(
-                                    `/media/message/${message._id}`,
-                                    {
-                                        responseType: "blob",
-                                    }
-                                );
+                                try {
+                                    const mediaResponse =
+                                        await axiosInstance.get(
+                                            `/media/message/${message._id}`,
+                                            {
+                                                responseType:
+                                                    "blob",
+                                            }
+                                        );
 
-                            const imageUrl =
-                                URL.createObjectURL(
-                                    imageResponse.data
-                                );
+                                    const mediaUrl =
+                                        URL.createObjectURL(
+                                            mediaResponse.data
+                                        );
 
-                            imageUrls.push(imageUrl);
+                                    mediaUrls.push(
+                                        mediaUrl
+                                    );
 
-                            return {
-                                ...message,
-                                imageUrl,
-                            };
-                        } catch (error) {
-                            console.error(
-                                `Could not load message image ${message._id}:`,
-                                error
-                            );
+                                    return {
+                                        ...message,
+                                        mediaUrl,
+                                    };
+                                } catch (error) {
+                                    console.error(
+                                        `Could not load message media ${message._id}:`,
+                                        error
+                                    );
 
-                            return message;
-                        }
-                    })
-                );
+                                    return message;
+                                }
+                            }
+                        )
+                    );
 
                 setMessages(loadedMessages);
 
@@ -282,7 +286,7 @@ function Chat() {
         loadMessages();
 
         return () => {
-            imageUrls.forEach((url) => {
+            mediaUrls.forEach((url) => {
                 URL.revokeObjectURL(url);
             });
         };
@@ -299,7 +303,10 @@ function Chat() {
     async function handleSendMessage(event) {
         event.preventDefault();
 
-        if (!messageText.trim() && !selectedImage) {
+        if (
+            !messageText.trim() &&
+            !selectedMedia
+        ) {
             return;
         }
 
@@ -307,17 +314,24 @@ function Chat() {
             const formData = new FormData();
 
             if (messageText.trim()) {
-                formData.append("text", messageText.trim());
+                formData.append(
+                    "text",
+                    messageText.trim()
+                );
             }
 
-            if (selectedImage) {
-                formData.append("image", selectedImage);
+            if (selectedMedia) {
+                formData.append(
+                    "media",
+                    selectedMedia
+                );
             }
 
-            const response = await axiosInstance.post(
-                `/messages/send/${id}`,
-                formData
-            );
+            const response =
+                await axiosInstance.post(
+                    `/messages/send/${id}`,
+                    formData
+                );
 
             const newMessage = response.data;
 
@@ -333,40 +347,52 @@ function Chat() {
                 );
             }
 
-            if (newMessage.image) {
+            if (newMessage.media) {
                 try {
-                    const imageResponse = await axiosInstance.get(
-                        `/media/message/${newMessage._id}`,
-                        {
-                            responseType: "blob",
-                        }
-                    );
+                    const mediaResponse =
+                        await axiosInstance.get(
+                            `/media/message/${newMessage._id}`,
+                            {
+                                responseType: "blob",
+                            }
+                        );
 
-                    newMessage.imageUrl = URL.createObjectURL(
-                        imageResponse.data
-                    );
+                    newMessage.mediaUrl =
+                        URL.createObjectURL(
+                            mediaResponse.data
+                        );
                 } catch (error) {
-                    console.error("Could not load sent image:", error);
+                    console.error(
+                        "Could not load sent media:",
+                        error
+                    );
                 }
             }
 
             newMessage.isMine = true;
 
-            setMessages(previousMessages => [
-                ...previousMessages,
-                newMessage
-            ]);
+            setMessages(
+                (previousMessages) => [
+                    ...previousMessages,
+                    newMessage,
+                ]
+            );
 
             setMessageText("");
-            setSelectedImage(null);
+            setSelectedMedia(null);
 
             if (messageInputRef.current) {
-                messageInputRef.current.style.height = "auto";
+                messageInputRef.current.style.height =
+                    "auto";
+
                 messageInputRef.current.style.overflowY =
                     "hidden";
             }
         } catch (error) {
-            console.error("Could not send message:", error);
+            console.error(
+                "Could not send message:",
+                error
+            );
         }
     }
 
@@ -636,11 +662,21 @@ function Chat() {
                                             <p>{message.text}</p>
                                         )}
 
-                                        {message.imageUrl && (
+                                        {message.mediaUrl && message.mediaType === "image" && (
                                             <img
-                                                src={message.imageUrl}
+                                                src={message.mediaUrl}
                                                 alt="Message attachment"
                                                 className="message-image"
+                                            />
+                                        )}
+
+                                        {message.mediaUrl &&message.mediaType === "video" && (
+                                            <video
+                                                src={message.mediaUrl}
+                                                className="message-video"
+                                                controls
+                                                playsInline
+                                                preload="metadata"
                                             />
                                         )}
                                     </div>
@@ -672,13 +708,15 @@ function Chat() {
                 <div ref={messagesEndRef} />
             </div>
 
-            {selectedImage && (
-                <div className="selected-image-info">
-                    <span>{selectedImage.name}</span>
+            {selectedMedia && (
+                <div className="selected-media-info">
+                    <span>{selectedMedia.name}</span>
 
                     <button
                         type="button"
-                        onClick={() => setSelectedImage(null)}
+                        onClick={() =>
+                            setSelectedMedia(null)
+                        }
                     >
                         ×
                     </button>
@@ -705,7 +743,7 @@ function Chat() {
 
             <form className="chat-input-area" onSubmit={handleSendMessage}>
                 <label
-                    className={`chat-image-button ${
+                    className={`.chat-media-button ${
                         conversationRequestState === "waiting-for-reply"
                             ? "disabled"
                             : ""
@@ -714,14 +752,16 @@ function Chat() {
                     +
                     <input
                         type="file"
-                        accept="image/*"
+                        accept="image/*,video/*"
                         hidden
                         disabled={
-                            conversationRequestState === "waiting-for-reply"
+                            conversationRequestState ===
+                            "waiting-for-reply"
                         }
                         onChange={(event) => {
-                            setSelectedImage(
-                                event.target.files?.[0] || null
+                            setSelectedMedia(
+                                event.target.files?.[0] ||
+                                    null
                             );
                         }}
                     />
@@ -785,14 +825,17 @@ function Chat() {
                     type="submit"
                     className="chat-send-button"
                     disabled={
-                        conversationRequestState === "waiting-for-reply" ||
-                        (!messageText.trim() && !selectedImage)
+                        conversationRequestState ===
+                            "waiting-for-reply" ||
+                        (!messageText.trim() &&
+                            !selectedMedia)
                     }
                     aria-label="Send message"
                 >
                     <img
                         src={
-                            messageText.trim() || selectedImage
+                            messageText.trim() ||
+                            selectedMedia
                                 ? "/arrow_up.png"
                                 : "/arrow_right.png"
                         }

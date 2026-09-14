@@ -11,6 +11,7 @@ export const STATUS_CODES = {
         WEB_CONFLICT: 409,
         WEB_PAYLOAD_TOO_LARGE: 413,
         WEB_UNSUPPORTED_MEDIA_TYPE: 415,
+        WEB_RANGE_NOT_SATISFIABLE: 416,
         WEB_TOO_MANY_REQUESTS: 429,
     },
 
@@ -19,5 +20,6 @@ export const STATUS_CODES = {
         WEB_OK: 200,
         WEB_CREATED: 201,
         WEB_NO_CONTENT: 204,
+        WEB_PARTIAL_CONTENT: 206,
     }
 };

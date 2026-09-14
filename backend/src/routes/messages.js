@@ -15,6 +15,6 @@ router.get("/contacts", getAllContacts);
 router.get("/chats", getActiveChats);
 router.get("/:id", getMessagesByUserId);
 
-router.post("/send/:id", upload.single("image"), sendMessage);
+router.post("/send/:id", upload.single("media"), sendMessage);
 
 export default router;

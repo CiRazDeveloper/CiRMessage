@@ -7,14 +7,7 @@ import minioClient from "../../lib/minio.js";
 import mod_user from "../../models/mod_user.js";
 import { STATUS_CODES } from "../../status_codes.js";
 import { getIO } from "../../lib/socket.js";
-
-const extensionMap = {
-    "image/jpeg": "jpg",
-    "image/png": "png",
-    "image/webp": "webp",
-    "image/gif": "gif",
-    "image/avif": "avif",
-};
+import { extensionMap } from "../../middlewares/mid_upload.js";
 
 export const sendMessage = async (req, res) => {
     try {
@@ -102,13 +95,15 @@ export const sendMessage = async (req, res) => {
         }
 
         /*
-         * IMAGE UPLOAD
+         * MEDIA UPLOAD
          *
          * This happens AFTER the message-request
          * check so rejected messages don't leave
-         * unused images in MinIO.
+         * unused media in MinIO.
          */
-        let imageKey;
+        let mediaKey;
+        let mediaType;
+        let mediaMimeType;
 
         if (req.file) {
             const extension =
@@ -117,10 +112,12 @@ export const sendMessage = async (req, res) => {
             if (!extension) {
                 return res
                     .status(
-                        STATUS_CODES.ERROR.WEB_UNSUPPORTED_MEDIA_TYPE
+                        STATUS_CODES.ERROR
+                            .WEB_UNSUPPORTED_MEDIA_TYPE
                     )
                     .json({
-                        message: "Unsupported image type",
+                        message:
+                            "Unsupported media type",
                     });
             }
 
@@ -156,31 +153,41 @@ export const sendMessage = async (req, res) => {
                     "_"
                 );
 
-            imageKey =
+            mediaKey =
                 `users/${safeUsername}/messages/` +
                 `${safeReceiverUsername}/` +
                 `${crypto.randomUUID()}.${extension}`;
+
+            mediaType =
+                req.file.mimetype.startsWith(
+                    "video/"
+                )
+                    ? "video"
+                    : "image";
+
+            mediaMimeType =
+                req.file.mimetype;
 
             await minioClient.send(
                 new PutObjectCommand({
                     Bucket:
                         process.env.MINIO_BUCKET,
-                    Key: imageKey,
+                    Key: mediaKey,
                     Body: req.file.buffer,
                     ContentType:
-                        req.file.mimetype,
+                        mediaMimeType,
                 })
             );
         }
 
-        if (!text?.trim() && !imageKey) {
+        if (!text?.trim() && !mediaKey) {
             return res
                 .status(
                     STATUS_CODES.ERROR.WEB_BAD_REQUEST
                 )
                 .json({
                     message:
-                        "Text or image is required",
+                        "Text or media is required",
                 });
         }
 
@@ -191,7 +198,9 @@ export const sendMessage = async (req, res) => {
                 text:
                     text?.trim() ||
                     undefined,
-                image: imageKey,
+                media: mediaKey,
+                mediaType,
+                mediaMimeType,
             });
 
         const io = getIO();
