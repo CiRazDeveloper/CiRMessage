@@ -11,7 +11,8 @@
     "build": "npm run build --prefix frontend",
     "mobile:sync": "npm run build && npx cap sync",
     "android": "npm run build && npx cap sync android && npx cap open android",
-    "start": "npm run start --prefix backend"
+    "start": "npm run start --prefix backend",
+    "start:all": "npm run build --prefix frontend && npm run start --prefix backend"
   },
   "keywords": [],
   "author": "",
