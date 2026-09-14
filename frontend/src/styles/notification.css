@@ -1,0 +1,78 @@
+.notification-container {
+    position: fixed;
+
+    top: 20px;
+    right: 20px;
+
+    z-index: 9999;
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 10px;
+
+    width: min(360px, calc(100vw - 40px));
+}
+
+.notification {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 12px;
+
+    padding: 12px 14px;
+
+    border-radius: 10px;
+
+    background-color: var(
+        --private-card-background-color
+    );
+
+    color: var(--private-text-color);
+
+    border: 1px solid #ffffff22;
+
+    box-shadow:
+        0 8px 24px #00000033;
+
+    font-size: 14px;
+}
+
+.notification button {
+    background: transparent;
+
+    border: none;
+
+    color: inherit;
+
+    font-size: 20px;
+
+    cursor: pointer;
+}
+
+.notification-success {
+    border-color: #2ecc71;
+}
+
+.notification-error {
+    border-color: #e74c3c;
+}
+
+.notification-warning {
+    border-color: #f39c12;
+}
+
+.notification-info {
+    border-color: #3498db;
+}
+
+@media (max-width: 768px) {
+    .notification-container {
+        top: 12px;
+        left: 12px;
+        right: 12px;
+
+        width: auto;
+    }
+}

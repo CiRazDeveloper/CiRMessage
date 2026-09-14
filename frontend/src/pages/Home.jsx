@@ -9,9 +9,11 @@ import { getDisplayName } from "./../storage.js";
 import { setStatus, statuses } from "./../scripts/setStatus.js";
 import StatusDot from "./../components/StatusDot.jsx";
 import SwitchButton from "../components/SwitchButton.jsx";
+import { useNotification } from "../components/NotificationContext.jsx";
 
 function Home() {
     const navigate = useNavigate();
+    const { showNotification } = useNotification();
     const displayName = getDisplayName();
 
     // GENERAL
@@ -70,6 +72,11 @@ function Home() {
                 "Could not load contacts:",
                 error
             );
+            showNotification(
+                error.response?.data?.message ||
+                    "Could not load contacts",
+                "error"
+            );
         }
     }
 
@@ -106,6 +113,11 @@ function Home() {
             console.error(
                 "Could not load chats:",
                 error
+            );
+            showNotification(
+                error.response?.data?.message ||
+                    "Could not load chats",
+                "error"
             );
         }
     }
@@ -358,6 +370,11 @@ function Home() {
                         "Could not change status:",
                         response?.message
                     );
+                    showNotification(
+                        response?.message ||
+                            "Could not change status",
+                        "error"
+                    );
 
                     return;
                 }
@@ -368,6 +385,10 @@ function Home() {
 
                 console.log(
                     `Status changed to ${response.status}`
+                );
+                showNotification(
+                    `Status changed to ${response.status}`,
+                    "success"
                 );
             }
         );
@@ -385,10 +406,19 @@ function Home() {
             
             if (response.status === 200) {
                 socket.disconnect();
+                showNotification(
+                    "Logged out successfully",
+                    "success"
+                );
                 navigate("/login");
             }
         } catch (error) {
-            
+            console.error("Logout failed:", error);
+            showNotification(
+                error.response?.data?.message ||
+                    "Could not log out",
+                "error"
+            );
         }
     }
 

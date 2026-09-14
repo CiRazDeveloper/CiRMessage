@@ -6,10 +6,12 @@ import { Link, useNavigate } from "react-router-dom";
 import { saveUser } from "../storage.js";
 
 import toggleInputVisibility from "../components/ToggleInputVisibility.jsx";
+import { useNotification } from "../components/NotificationContext.jsx";
 
 function Signup() {
     const navigate = useNavigate();
     const { showInput, toggleVisibility } = toggleInputVisibility();
+    const { showNotification } = useNotification();
     
     const [displayName, setDisplayName] = useState("");
     const [username, setUsername] = useState("");
@@ -34,10 +36,15 @@ function Signup() {
 
             saveUser(response.data.user);
 
+            showNotification("Account created successfully", "success");
             navigate("/home");
         } catch (error) {
             console.error("Signup failed:", error);
-            console.log(error.response?.data);
+            showNotification(
+                error.response?.data?.message ||
+                    "Could not create account",
+                "error"
+            );
         }
     }
 

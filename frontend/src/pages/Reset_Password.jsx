@@ -5,9 +5,11 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import toggleInputVisibility from "../components/ToggleInputVisibility.jsx";
+import { useNotification } from "../components/NotificationContext.jsx";
 
 function Reset_Password() {
     const navigate = useNavigate();
+    const { showNotification } = useNotification();
     const {
         showInput: showInputSecret,
         toggleVisibility: toggleVisibilitySecret,
@@ -36,10 +38,18 @@ function Reset_Password() {
 
             console.log(response.data);
 
+            showNotification(
+                "Password reset successfully",
+                "success"
+            );
             navigate("/login");
         } catch (error) {
             console.error("Password reset failed:", error);
-            console.log(error.response?.data);
+            showNotification(
+                error.response?.data?.message ||
+                    "Could not reset password",
+                "error"
+            );
         }
     }
 

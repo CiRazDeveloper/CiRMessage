@@ -5,9 +5,13 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { axiosInstance } from "../scripts/lib/axios.js";
 import { socket } from "../scripts/lib/socket.js";
 import StatusDot from "./../components/StatusDot.jsx";
+import { useNotification } from "../components/NotificationContext.jsx";
+
+const MAX_MEDIA_SIZE = 100 * 1024 * 1024;
 
 function Chat() {
     const navigate = useNavigate();
+    const { showNotification } = useNotification();
     const location = useLocation();
     const { id } = useParams();
 
@@ -58,6 +62,11 @@ function Chat() {
                 );
 
                 setProfilePictureUrl(null);
+                showNotification(
+                    error.response?.data?.message ||
+                        "Could not load profile picture",
+                    "error"
+                );
             }
         }
 
@@ -280,6 +289,11 @@ function Chat() {
                     "Could not load messages:",
                     error
                 );
+                showNotification(
+                    error.response?.data?.message ||
+                        "Could not load messages",
+                    "error"
+                );
             }
         }
 
@@ -307,6 +321,10 @@ function Chat() {
             !messageText.trim() &&
             !selectedMedia
         ) {
+            showNotification(
+                "Enter a message or select a file",
+                "info"
+            );
             return;
         }
 
@@ -392,6 +410,11 @@ function Chat() {
             console.error(
                 "Could not send message:",
                 error
+            );
+            showNotification(
+                error.response?.data?.message ||
+                    "Could not send message",
+                "error"
             );
         }
     }
@@ -759,9 +782,25 @@ function Chat() {
                             "waiting-for-reply"
                         }
                         onChange={(event) => {
-                            setSelectedMedia(
-                                event.target.files?.[0] || null
-                            );
+                            const file =
+                                event.target.files?.[0] || null;
+
+                            if (!file) {
+                                setSelectedMedia(null);
+                                return;
+                            }
+
+                            if (file.size > MAX_MEDIA_SIZE) {
+                                setSelectedMedia(null);
+                                event.target.value = "";
+                                showNotification(
+                                    "Media files must be 100 MB or smaller",
+                                    "error"
+                                );
+                                return;
+                            }
+
+                            setSelectedMedia(file);
                         }}
                     />
                 </label>
