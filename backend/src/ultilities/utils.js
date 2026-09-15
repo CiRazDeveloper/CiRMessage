@@ -16,7 +16,9 @@ export const generateToken = (userId, res) => {
     res.cookie("jwt", token, {
        maxAge: 7 * 24 * 60 * 60 * 1000,
        httpOnly: true, // prevent XSS attacks: cross-site scripting
-       sameSite: "strict", // prevent CSRF attacks
+       // The Capacitor Android client is hosted at capacitor://localhost
+       // and must send this cookie to the remote API.
+       sameSite: NODE_ENV === "development" ? "lax" : "none",
        secure: NODE_ENV === "development" ? false : true
     });
 
