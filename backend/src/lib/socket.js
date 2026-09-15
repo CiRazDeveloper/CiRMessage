@@ -155,6 +155,14 @@ export const initializeSocket = (server) => {
             });
         });
 
+        socket.on("get-my-status", (callback) => {
+            const currentPresence = userPresence.get(userId);
+
+            callback?.({
+                status: currentPresence?.status || "Online",
+            });
+        });
+
        socket.on("message-delivered", async (messageId, callback) => {
                 try {
                     const receiverId =

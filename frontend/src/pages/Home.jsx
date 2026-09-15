@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { axiosInstance } from "../scripts/lib/axios.js";
 import { socket } from "../scripts/lib/socket.js";
-import { getDisplayName } from "./../storage.js";
+import { getDisplayName, getUser } from "./../storage.js";
 import { setStatus, statuses } from "./../scripts/setStatus.js";
 import StatusDot from "./../components/StatusDot.jsx";
 import SwitchButton from "../components/SwitchButton.jsx";
@@ -15,6 +15,7 @@ function Home() {
     const navigate = useNavigate();
     const { showNotification } = useNotification();
     const displayName = getDisplayName();
+    const currentUser = getUser();
 
     // GENERAL
     const [activePage, setActivePage] = useState("chats");
@@ -236,13 +237,69 @@ function Home() {
     // --- PROFILE ---
     // MY STATUS
     useEffect(() => {
+        function applyStatus(status) {
+            if (!statuses.includes(status)) {
+                return;
+            }
+
+            setActivityStatus(status);
+            setPresenceStatus(status);
+            setStatus(status);
+        }
+
+        function requestCurrentStatus() {
+            socket.emit(
+                "get-my-status",
+                (response) => {
+                    applyStatus(response?.status);
+                }
+            );
+        }
+
+        function handleStatusChanged({
+            userId,
+            status,
+        }) {
+            if (
+                userId?.toString() !==
+                currentUser?._id?.toString()
+            ) {
+                return;
+            }
+
+            applyStatus(status);
+        }
+
+        socket.on(
+            "connect",
+            requestCurrentStatus
+        );
+
+        socket.on(
+            "user-status-changed",
+            handleStatusChanged
+        );
+
+        if (socket.connected) {
+            requestCurrentStatus();
+        }
+
+        return () => {
+            socket.off(
+                "connect",
+                requestCurrentStatus
+            );
+
+            socket.off(
+                "user-status-changed",
+                handleStatusChanged
+            );
+        };
+    }, [currentUser?._id]);
+
+    useEffect(() => {
         if (activityStatus !== "Online") {
             setPresenceStatus(activityStatus);
-            
-            socket.emit(
-                "set-status",
-                activityStatus
-            );
             
             return;
         }
@@ -323,11 +380,6 @@ function Home() {
         );
 
         setPresenceStatus("Online");
-
-        socket.emit(
-            "set-status",
-            "Online"
-        );
 
         const activityCheckInterval =
             setInterval(
