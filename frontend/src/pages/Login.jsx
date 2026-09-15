@@ -30,7 +30,7 @@ function Login() {
 
             if (response.status === 200) {
                 saveUser(response.data.user);
-                showNotification("Login successful", "success");
+                showNotification("Login successful", "success", { dismiss: "automatic",});
                 navigate("/home");
             }
 

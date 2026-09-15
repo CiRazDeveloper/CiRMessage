@@ -6,8 +6,7 @@ import { axiosInstance } from "../scripts/lib/axios.js";
 import { socket } from "../scripts/lib/socket.js";
 import StatusDot from "./../components/StatusDot.jsx";
 import { useNotification } from "../components/NotificationContext.jsx";
-
-const MAX_MEDIA_SIZE = 100 * 1024 * 1024;
+import { getMaxMediaSize } from "../scripts/media.js";
 
 function Chat() {
     const navigate = useNavigate();
@@ -790,11 +789,11 @@ function Chat() {
                                 return;
                             }
 
-                            if (file.size > MAX_MEDIA_SIZE) {
+                            if (file.size > getMaxMediaSize()) {
                                 setSelectedMedia(null);
                                 event.target.value = "";
                                 showNotification(
-                                    "Media files must be 100 MB or smaller",
+                                    `Media files must be ${getMaxMediaSize}MB or smaller`,
                                     "error"
                                 );
                                 return;

@@ -38,10 +38,8 @@ function Reset_Password() {
 
             console.log(response.data);
 
-            showNotification(
-                "Password reset successfully",
-                "success"
-            );
+            showNotification("Password reset successfully", "success", { dismiss: "automatic",});
+
             navigate("/login");
         } catch (error) {
             console.error("Password reset failed:", error);

@@ -36,7 +36,8 @@ function Signup() {
 
             saveUser(response.data.user);
 
-            showNotification("Account created successfully", "success");
+            showNotification("Account created successfully", "success", { dismiss: "automatic",});
+
             navigate("/home");
         } catch (error) {
             console.error("Signup failed:", error);
