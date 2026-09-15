@@ -13,7 +13,7 @@
     "sync:android": "npx cap sync android",
     "open:android": "npx cap open android",
     "start": "npm run start --prefix backend",
-    "start:all": "npm run install:all && npm run build && npm run sync:mobile && npm run sync:android && npm run start"
+    "start:all": "npm run install:all && npm run build && npm run start"
   },
   "keywords": [],
   "author": "",
