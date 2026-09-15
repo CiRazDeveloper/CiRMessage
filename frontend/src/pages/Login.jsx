@@ -5,12 +5,12 @@ import { Link, useNavigate } from "react-router-dom";
 import { axiosInstance } from "../scripts/lib/axios.js";
 import { saveUser } from "../storage.js";
 
-import toggleInputVisibility from "../components/ToggleInputVisibility.jsx";
+import PasswordInput from "../components/PasswordInput.jsx";
+import TextInput from "../components/TextInput.jsx";
 import { useNotification } from "../components/NotificationContext.jsx";
 
 function Login() {
     const navigate = useNavigate();
-    const { showInput, toggleVisibility } = toggleInputVisibility();
     const { showNotification } = useNotification();
     
     const [identifier, setIdentifier] = useState("");
@@ -50,30 +50,18 @@ function Login() {
                 <h1>Login</h1>
 
                 <div className="login-inputs">
-                    <div className="input-wrapper">
-                        <input
-                            type="text"
-                            placeholder="Email or Username"
-                            value={identifier}
-                            onChange={(event) => setIdentifier(event.target.value)}
-                        />
-                    </div>
+                    <TextInput
+                        type="text"
+                        placeholder="Email or Username"
+                        value={identifier}
+                        onChange={(event) => setIdentifier(event.target.value)}
+                    />
 
-                    <div className="input-wrapper">
-                        <input
-                            type={showInput ? "text" : "password"}
-                            placeholder="Password"
-                            value={password}
-                            onChange={(event) => setPassword(event.target.value)}
-                        />
-
-                        <button type="button" className="input-toggle" onClick={toggleVisibility}>
-                            <img
-                                src={showInput ? "/eye_on.svg" : "/eye_off.svg"}
-                                alt={showInput ? "Hide password" : "Show password"}
-                            />
-                        </button>
-                    </div>
+                    <PasswordInput
+                        placeholder="Password"
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                    />
                 </div>
 
                 <button className="login-button" onClick={handleLogin}>

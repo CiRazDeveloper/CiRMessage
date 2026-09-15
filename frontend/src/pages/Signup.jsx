@@ -5,12 +5,12 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { saveUser } from "../storage.js";
 
-import toggleInputVisibility from "../components/ToggleInputVisibility.jsx";
+import PasswordInput from "../components/PasswordInput.jsx";
+import TextInput from "../components/TextInput.jsx";
 import { useNotification } from "../components/NotificationContext.jsx";
 
 function Signup() {
     const navigate = useNavigate();
-    const { showInput, toggleVisibility } = toggleInputVisibility();
     const { showNotification } = useNotification();
     
     const [displayName, setDisplayName] = useState("");
@@ -55,64 +55,38 @@ function Signup() {
                 <h1>Signup</h1>
 
                 <div className="signup-inputs">
-                    <div className="input-wrapper">
-                        <input
-                            type="text"
-                            placeholder="Display Name"
-                            value={displayName}
-                            onChange={(event) => setDisplayName(event.target.value)}
-                        />
-                    </div>
+                    <TextInput
+                        type="text"
+                        placeholder="Display Name"
+                        value={displayName}
+                        onChange={(event) => setDisplayName(event.target.value)}
+                    />
 
-                    <div className="input-wrapper">
-                        <input
-                            type="text"
-                            placeholder="Username"
-                            value={username}
-                            onChange={(event) => setUsername(event.target.value)}
-                        />
-                    </div>
+                    <TextInput
+                        type="text"
+                        placeholder="Username"
+                        value={username}
+                        onChange={(event) => setUsername(event.target.value)}
+                    />
 
-                    <div className="input-wrapper">
-                        <input
-                            type="text"
-                            placeholder="Email"
-                            value={email}
-                            onChange={(event) => setEmail(event.target.value)}
-                        />
-                    </div>
+                    <TextInput
+                        type="text"
+                        placeholder="Email"
+                        value={email}
+                        onChange={(event) => setEmail(event.target.value)}
+                    />
 
-                    <div className="input-wrapper">
-                        <input
-                            type={showInput ? "text" : "password"}
-                            placeholder="Password"
-                            value={password}
-                            onChange={(event) => setPassword(event.target.value)}
-                        />
+                    <PasswordInput
+                        placeholder="Password"
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                    />
 
-                        <button type="button" className="input-toggle" onClick={toggleVisibility}>
-                            <img
-                                src={showInput ? "/eye_on.svg" : "/eye_off.svg"}
-                                alt={showInput ? "Hide password" : "Show password"}
-                            />
-                        </button>
-                    </div>
-
-                    <div className="input-wrapper">
-                        <input
-                            type={showInput ? "text" : "password"}
-                            placeholder="Secret (REMEMBER THIS!)"
-                            value={secret}
-                            onChange={(event) => setSecret(event.target.value)}
-                        />
-
-                        <button type="button" className="input-toggle" onClick={toggleVisibility}>
-                            <img
-                                src={showInput ? "/eye_on.svg" : "/eye_off.svg"}
-                                alt={showInput ? "Hide secret" : "Show secret"}
-                            />
-                        </button>
-                    </div>
+                    <PasswordInput
+                        placeholder="Secret (REMEMBER THIS!)"
+                        value={secret}
+                        onChange={(event) => setSecret(event.target.value)}
+                    />
 
                 </div>
 

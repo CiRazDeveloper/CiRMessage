@@ -9,6 +9,7 @@ import { getDisplayName, getUser } from "./../storage.js";
 import { setStatus, statuses } from "./../scripts/setStatus.js";
 import StatusDot from "./../components/StatusDot.jsx";
 import SwitchButton from "../components/SwitchButton.jsx";
+import TextInput from "../components/TextInput.jsx";
 import { useNotification } from "../components/NotificationContext.jsx";
 
 function Home() {
@@ -627,14 +628,12 @@ function Home() {
                 <section className="chats-page">
                     <h1>Chats</h1>
 
-                    <div className="input-wrapper">
-                        <input
-                            type="text"
-                            placeholder="Search chat"
-                            value={chatSearch}
-                            onChange={(event) => setChatSearch(event.target.value)}
-                        />
-                    </div>
+                    <TextInput
+                        type="text"
+                        placeholder="Search chat"
+                        value={chatSearch}
+                        onChange={(event) => setChatSearch(event.target.value)}
+                    />
 
                     <div className="chats-results">
                         {foundChats.map(user => (
@@ -697,14 +696,12 @@ function Home() {
                 <section className="search-page">
                     <h1>Search</h1>
 
-                    <div className="input-wrapper">
-                        <input
-                            type="text"
-                            placeholder="Search for @username"
-                            value={userSearch}
-                            onChange={(event) => setUserSearch(event.target.value)}
-                        />
-                    </div>
+                    <TextInput
+                        type="text"
+                        placeholder="Search for @username"
+                        value={userSearch}
+                        onChange={(event) => setUserSearch(event.target.value)}
+                    />
 
                     <div className="search-results">
                         {foundUsers.map(user => (

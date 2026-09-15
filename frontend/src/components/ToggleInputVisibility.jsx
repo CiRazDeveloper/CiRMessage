@@ -1,7 +1,3 @@
-import "./../styles/toggleInputVvisibility.css";
-import "./../styles/input_wrapper.css";
-
-
 import { useState } from "react";
 
 function ToggleInputVisibility() {
