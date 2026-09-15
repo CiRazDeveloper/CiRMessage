@@ -13,7 +13,18 @@ export function NotificationProvider({
     const [notifications, setNotifications] =
         useState([]);
 
-    function showNotification(message, type = "info") {
+    function showNotification(
+        message,
+        type = "info",
+        options = {}
+    ) {
+        const {
+            dismiss =
+                type === "info"
+                    ? "automatic"
+                    : "manual",
+            duration = 5000,
+        } = options;
         const id = crypto.randomUUID();
 
         setNotifications((previous) => [
@@ -22,6 +33,9 @@ export function NotificationProvider({
                 id,
                 message,
                 type,
+                dismiss,
+                duration,
+                createdAt: Date.now(),
             },
         ]);
 

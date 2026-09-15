@@ -388,7 +388,10 @@ function Home() {
                 );
                 showNotification(
                     `Status changed to ${response.status}`,
-                    "success"
+                    "success",
+                    {
+                        dismiss: "automatic",
+                    }
                 );
             }
         );
@@ -408,7 +411,10 @@ function Home() {
                 socket.disconnect();
                 showNotification(
                     "Logged out successfully",
-                    "success"
+                    "success",
+                    {
+                        dismiss: "automatic",
+                    }
                 );
                 navigate("/login");
             }

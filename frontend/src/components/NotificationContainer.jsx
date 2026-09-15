@@ -1,5 +1,6 @@
 import "../styles/notification.css";
 
+import { useEffect } from "react";
 import { useNotification } from "./NotificationContext.jsx";
 
 function NotificationContainer() {
@@ -7,6 +8,38 @@ function NotificationContainer() {
         notifications,
         removeNotification,
     } = useNotification();
+
+    useEffect(() => {
+        const timers = notifications
+            .filter(
+                (notification) =>
+                    notification.dismiss === "automatic"
+            )
+            .map((notification) => {
+                const duration =
+                    Number.isFinite(notification.duration) &&
+                    notification.duration > 0
+                        ? notification.duration
+                        : 5000;
+
+                const remainingTime = Math.max(
+                    0,
+                    notification.createdAt +
+                        duration -
+                        Date.now()
+                );
+
+                return window.setTimeout(() => {
+                    removeNotification(notification.id);
+                }, remainingTime);
+            });
+
+        return () => {
+            timers.forEach((timer) => {
+                window.clearTimeout(timer);
+            });
+        };
+    }, [notifications, removeNotification]);
 
     return (
         <div className="notification-container">
@@ -33,17 +66,19 @@ function NotificationContainer() {
                             <span>{notification.message}</span>
                         </div>
 
-                        <button
-                            type="button"
-                            onClick={() =>
-                                removeNotification(
-                                    notification.id
-                                )
-                            }
-                            aria-label="Dismiss notification"
-                        >
-                            Dismiss
-                        </button>
+                        {notification.dismiss === "manual" && (
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    removeNotification(
+                                        notification.id
+                                    )
+                                }
+                                aria-label="Dismiss notification"
+                            >
+                                Dismiss
+                            </button>
+                        )}
                     </div>
                 )
             )}
