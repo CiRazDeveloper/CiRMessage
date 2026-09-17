@@ -1,8 +1,13 @@
 import multer from "multer";
 import { STATUS_CODES } from "../status_codes.js";
+import {
+    MAX_MEDIA_SIZE_BYTES,
+    MAX_MEDIA_SIZE_MB,
+} from "../../../shared/shared_media.js";
 
 const storage = multer.memoryStorage();
-export const MAX_UPLOAD_SIZE_BYTES = 500 * 1024 * 1024;
+export const MAX_UPLOAD_SIZE_BYTES =
+    MAX_MEDIA_SIZE_BYTES;
 
 export const extensionMap = {
     // Images
@@ -51,7 +56,7 @@ export function handleUploadError(error, req, res, next) {
             )
             .json({
             message:
-                "Media file is too large. The maximum upload size is 500 MB.",
+                `Media file is too large. The maximum upload size is ${MAX_MEDIA_SIZE_MB} MB.`,
             });
     }
 

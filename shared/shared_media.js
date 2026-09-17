@@ -1,0 +1,6 @@
+export const MAX_MEDIA_SIZE_BYTES = 500 * 1024 * 1024;
+export const MAX_MEDIA_SIZE_MB =
+    MAX_MEDIA_SIZE_BYTES / (1024 * 1024);
+export const MAX_IMAGE_UPLOAD_BYTES = 4 * 1024 * 1024;
+export const MAX_IMAGE_DIMENSION = 4096;
+export const JPEG_QUALITY_STEPS = [0.82, 0.7, 0.58, 0.46];

@@ -6,7 +6,10 @@ import { axiosInstance } from "../scripts/lib/axios.js";
 import { socket } from "../scripts/lib/socket.js";
 import StatusDot from "./../components/StatusDot.jsx";
 import { useNotification } from "../components/NotificationContext.jsx";
-import { getMaxMediaSize } from "../scripts/media.js";
+import {
+    getMaxMediaSize,
+    prepareMediaForUpload,
+} from "../scripts/media.js";
 
 function Chat() {
     const navigate = useNavigate();
@@ -338,9 +341,14 @@ function Chat() {
             }
 
             if (selectedMedia) {
+                const mediaToUpload =
+                    await prepareMediaForUpload(
+                        selectedMedia
+                    );
+
                 formData.append(
                     "media",
-                    selectedMedia
+                    mediaToUpload
                 );
             }
 
@@ -411,7 +419,9 @@ function Chat() {
                 error
             );
             showNotification(
-                error.response?.data?.message ||
+                (error.response?.status === 413
+                    ? `Media file is too large. Please choose a file smaller than ${getMaxMediaSize() / (1024 * 1024)} MB.`
+                    : error.response?.data?.message) ||
                     "Could not send message",
                 "error"
             );
@@ -793,7 +803,7 @@ function Chat() {
                                 setSelectedMedia(null);
                                 event.target.value = "";
                                 showNotification(
-                                    `Media files must be ${getMaxMediaSize}MB or smaller`,
+                                    `Media files must be ${getMaxMediaSize() / (1024 * 1024)} MB or smaller`,
                                     "error"
                                 );
                                 return;
