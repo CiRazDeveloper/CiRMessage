@@ -97,10 +97,12 @@ async function checkPassword(password) {
 
 async function checkSecret(providedSecret, storedSecret) {
     const decryptedSecret = await decrypt(storedSecret);
+    console.log(decryptedSecret);
 
     if (providedSecret !== decryptedSecret) {
         return "You provided incorrect data!";
     }
+
 
     return null;
 }
