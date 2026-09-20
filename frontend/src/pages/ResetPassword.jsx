@@ -1,4 +1,4 @@
-import "../styles/reset_password.css";
+import "../styles/resetPassword.css";
 
 import { axiosInstance } from "../scripts/lib/axios.js";
 import { useState } from "react";
@@ -8,7 +8,7 @@ import PasswordInput from "../components/PasswordInput.jsx";
 import TextInput from "../components/TextInput.jsx";
 import { useNotification } from "../components/NotificationContext.jsx";
 
-function Reset_Password() {
+function ResetPassword() {
     const navigate = useNavigate();
     const { showNotification } = useNotification();
     
@@ -21,7 +21,7 @@ function Reset_Password() {
         event.preventDefault();
 
         try {
-            const response = await axiosInstance.post("/auth/reset_password", {
+            const response = await axiosInstance.post("/auth/resetPassword", {
                 identifier,
                 secret,
                 newPassword,
@@ -83,4 +83,4 @@ function Reset_Password() {
     );
 }
 
-export default Reset_Password;
+export default ResetPassword;

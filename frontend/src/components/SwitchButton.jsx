@@ -1,4 +1,4 @@
-import "./../styles/switch_button.css";
+import "./../styles/switchButton.css";
 
 function SwitchButton({ checked, onChange }) {
     return (

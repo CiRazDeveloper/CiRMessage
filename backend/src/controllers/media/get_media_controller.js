@@ -12,14 +12,14 @@ import { STATUS_CODES } from "../../status_codes.js";
 const streamObject = async (
     req,
     res,
-    key,
-    fallbackMimeType = "application/octet-stream"
+    key, // Location of the file in MinIO inside the bucket
+    fallbackMimeType = "application/octet-stream" // What type to use if none is provided: Generic binary data
 ) => {
-    const range = req.headers.range;
+    // Allows to jump to a minute in the Video without the Broswer needing to download the whole
+    const range = req.headers.range; 
 
     /*
-     * No Range request:
-     * normal image / full file response
+     * No Range? Download the entire object
      */
     if (!range) {
         const object = await minioClient.send(
@@ -29,16 +29,22 @@ const streamObject = async (
             })
         );
 
+        // Tells the browser what file it is
         res.setHeader(
             "Content-Type",
             object.ContentType || fallbackMimeType
         );
 
+        // Try to display/play the file rather than forcing the user to download it.
+        // An image can be displayed directly
+        // attachment: download the file
+        // inline: display if possible
         res.setHeader(
             "Content-Disposition",
             "inline"
         );
 
+        // Tells the browser how many bytes are being sent
         if (object.ContentLength !== undefined) {
             res.setHeader(
                 "Content-Length",
@@ -46,24 +52,27 @@ const streamObject = async (
             );
         }
 
+        // Tells the browser that this server supports byte-range requests
         res.setHeader(
             "Accept-Ranges",
             "bytes"
         );
 
+        // This tells the browser to cache the response for 24 hours
+        // Private means it can be cached by a private client/browser cache, but generally not by shared caches
         res.setHeader(
             "Cache-Control",
             "private, max-age=86400"
         );
 
+        // Streaming of the file bit by bit
         object.Body.pipe(res);
 
         return;
     }
 
     /*
-     * Range request:
-     * used especially by <video> for seeking
+     * Head request: Sends only information about the file
      */
     const head = await minioClient.send(
         new HeadObjectCommand({
@@ -72,31 +81,33 @@ const streamObject = async (
         })
     );
 
+    // The size of the file
     const fileSize = head.ContentLength;
 
+    // If no range, error because large files should not be processed
     if (fileSize === undefined) {
         throw new Error(
             "Could not determine media size"
         );
     }
 
-    const match =
-        range.match(/bytes=(\d*)-(\d*)/);
+    // Math range from start to end
+    const match = range.match(/bytes=(\d*)-(\d*)/);
 
+    // If range doesn´t have the expedted format retur
     if (!match) {
         return res
             .status(STATUS_CODES.ERROR.WEB_RANGE_NOT_SATISFIABLE)
             .send();
     }
 
-    let start = match[1]
-        ? Number(match[1])
-        : 0;
+    // Calculate start range
+    let start = match[1] ? Number(match[1]) : 0;
 
-    let end = match[2]
-        ? Number(match[2])
-        : fileSize - 1;
+    // Calculate end range
+    let end = match[2] ? Number(match[2]) : fileSize - 1;
 
+    // Check for the file to be withing the expected range
     if (
         start >= fileSize ||
         end >= fileSize ||
@@ -112,9 +123,10 @@ const streamObject = async (
             .send();
     }
 
-    const contentLength =
-        end - start + 1;
+    // Calculate the response size + 1 because both endpoints are inclusive
+    const contentLength = end - start + 1;
 
+    // Ask minio only for that byte section
     const object = await minioClient.send(
         new GetObjectCommand({
             Bucket: process.env.MINIO_BUCKET,
@@ -123,8 +135,10 @@ const streamObject = async (
         })
     );
 
+    // MinIO sends only a part of the content
     res.status(STATUS_CODES.INFO.WEB_PARTIAL_CONTENT);
 
+    // Send the Content-Type as e.g.: video/mp4
     res.setHeader(
         "Content-Type",
         object.ContentType ||
@@ -132,39 +146,44 @@ const streamObject = async (
             fallbackMimeType
     );
 
+    // The size of the response, not the entire file
     res.setHeader(
         "Content-Length",
         contentLength
     );
 
+    // Tells the broswer it received bytes start through end from a certain file size
     res.setHeader(
         "Content-Range",
         `bytes ${start}-${end}/${fileSize}`
     );
 
+    // Tells the browser that byte-range requests are supported
     res.setHeader(
         "Accept-Ranges",
         "bytes"
     );
 
+    // Let the browser display the media
     res.setHeader(
         "Content-Disposition",
         "inline"
     );
 
+    // This tells the browser to cache the response for 24 hours
+    // Private means it can be cached by a private client/browser cache, but generally not by shared caches
     res.setHeader(
         "Cache-Control",
         "private, max-age=86400"
     );
 
+    // Streaming of the file bit by bit
     object.Body.pipe(res);
 };
 
 export const getProfileMedia = async (req, res) => {
     try {
-        const userId =
-            req.params.userId ||
-            req.user._id;
+        const userId = req.params.userId || req.user._id;
 
         const user = await mod_user
             .findById(userId)
@@ -188,52 +207,69 @@ export const getProfileMedia = async (req, res) => {
                 .send();
         }
 
-        await streamObject(
-            req,
-            res,
-            user.profilePicture
-        );
+        await streamObject(req, res, user.profilePicture);
     } catch (error) {
         console.error(
             "getProfileMedia error:",
             error
         );
 
-        return res
-            .status(
-                STATUS_CODES.ERROR.WEB_NOT_FOUND
-            )
-            .json({
-                message:
-                    "Profile picture not found",
-            });
-    }
-};
-
-export const getMessageMedia = async (
-    req,
-    res
-) => {
-    try {
-        const message =
-            await mod_message.findById(
-                req.params.messageId
-            );
-
-        if (!message || !message.media) {
+        if (res.status === STATUS_CODES.ERROR.WEB_NOT_FOUND) {
             return res
                 .status(
                     STATUS_CODES.ERROR.WEB_NOT_FOUND
                 )
                 .json({
                     message:
-                        "Message media not found",
+                        "Profile picture not found",
+                });
+        } else if (res.status === STATUS_CODES.ERROR.SERVER_INTERNAL_ERROR) {
+            return res
+                .status(
+                    STATUS_CODES.ERROR.SERVER_INTERNAL_ERROR
+                )
+                .json({
+                    message:
+                        "Internal server error",
+                });
+        }
+    }
+};
+
+export const getMedia = async (req, res) => {
+    try {
+        // Get the message is e.g.: GET /messages/abc123/media -> abc123
+        const message =
+            await mod_message.findById(
+                req.params.messageId
+            );
+
+        // Check that the media or message exists
+        if (!message) {
+            return res
+                .status(
+                    STATUS_CODES.ERROR.WEB_NOT_FOUND
+                )
+                .json({
+                    message:
+                        "Message not found",
                 });
         }
 
-        const userId =
-            req.user._id.toString();
+        if (!message.media) {
+            return res
+                .status(
+                    STATUS_CODES.ERROR.WEB_NOT_FOUND
+                )
+                .json({
+                    message:
+                        "Media not found in message",
+                });
+        }
 
+        const userId = req.user._id.toString();
+
+        // If the logged-in user is neither the sender nor the receiver, deny access
         if (
             message.senderId.toString() !==
                 userId &&
@@ -242,10 +278,10 @@ export const getMessageMedia = async (
         ) {
             return res
                 .status(
-                    STATUS_CODES.ERROR.WEB_UNAUTHORIZED
+                    STATUS_CODES.ERROR.WEB_FORBIDDEN
                 )
                 .json({
-                    message: "Unauthorized",
+                    message: "Forbidden access",
                 });
         }
 
@@ -257,17 +293,28 @@ export const getMessageMedia = async (
         );
     } catch (error) {
         console.error(
-            "getMessageMedia error:",
+            "getMedia error:",
             error
         );
 
-        return res
-            .status(
-                STATUS_CODES.ERROR.WEB_NOT_FOUND
-            )
-            .json({
-                message:
-                    "Message media not found",
-            });
+        if (res.status === STATUS_CODES.ERROR.WEB_NOT_FOUND) {
+            return res
+                .status(
+                    STATUS_CODES.ERROR.WEB_NOT_FOUND
+                )
+                .json({
+                    message:
+                        "Media not found",
+                });
+        } else if (res.status === STATUS_CODES.ERROR.SERVER_INTERNAL_ERROR) {
+            return res
+                .status(
+                    STATUS_CODES.ERROR.SERVER_INTERNAL_ERROR
+                )
+                .json({
+                    message:
+                        "Internal server error",
+                });
+        }
     }
 };

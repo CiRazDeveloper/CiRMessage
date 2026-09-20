@@ -5,7 +5,7 @@ import { decrypt } from "../../ultilities/crypt.js";
 import { hashPassword } from "../../ultilities/hash.js";
 import { STATUS_CODES } from "../../status_codes.js";
 
-export const reset_password = async (req, res) => {
+export const resetPassword = async (req, res) => {
     let { identifier, secret, newPassword } = req.body;
 
     try {
@@ -102,5 +102,5 @@ async function checkSecret(providedSecret, storedSecret) {
         return "You provided incorrect data!";
     }
 
-    return null
+    return null;
 }

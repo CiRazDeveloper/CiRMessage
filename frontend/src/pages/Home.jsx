@@ -1,5 +1,5 @@
 import "./../styles/home.css";
-import "./../styles/switch_button.css";
+import "./../styles/switchButton.css";
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";

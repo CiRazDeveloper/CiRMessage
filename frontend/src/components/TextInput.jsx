@@ -1,4 +1,4 @@
-import "./../styles/text_input.css";
+import "./../styles/textInput.css";
 
 function TextInput(props) {
     return (

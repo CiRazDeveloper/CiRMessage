@@ -76,7 +76,7 @@ function Login() {
 
                     <p>
                         Don't remember your password?{" "}
-                        <Link to="/reset_password">Reset password</Link>
+                        <Link to="/resetPassword">Reset password</Link>
                     </p>
                 </div>
             </div>
