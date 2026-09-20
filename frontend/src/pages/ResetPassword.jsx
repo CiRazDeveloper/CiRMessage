@@ -6,7 +6,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import PasswordInput from "../components/PasswordInput.jsx";
 import TextInput from "../components/TextInput.jsx";
-import { useNotification } from "../components/NotificationContext.jsx";
+import { useNotification } from "../components/NotificationContext.js";
 
 function ResetPassword() {
     const navigate = useNavigate();

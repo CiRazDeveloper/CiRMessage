@@ -1,11 +1,16 @@
 import "./../styles/chat.css";
 
-import { useEffect, useRef, useState } from "react";
+import {
+    useCallback,
+    useEffect,
+    useRef,
+    useState,
+} from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { axiosInstance } from "../scripts/lib/axios.js";
 import { socket } from "../scripts/lib/socket.js";
 import StatusDot from "./../components/StatusDot.jsx";
-import { useNotification } from "../components/NotificationContext.jsx";
+import { useNotification } from "../components/NotificationContext.js";
 import {
     getMaxMediaSize,
     prepareMediaForUpload,
@@ -28,6 +33,12 @@ function Chat() {
     const messageInputRef = useRef(null);
     const deliveredMessageIdsRef = useRef(new Set());
     const latestSeenAtRef = useRef(null);
+
+    const scrollToBottom = useCallback(() => {
+        messagesEndRef.current?.scrollIntoView({
+            behavior: "smooth",
+        });
+    }, []);
 
 
     // --- PROFILE PICTURE ---
@@ -79,8 +90,7 @@ function Chat() {
                 URL.revokeObjectURL(profileUrl);
             }
         };
-    }, [id]);
-    
+    }, [id, showNotification]);
 
     // --- STATUS ---
     useEffect(() => {
@@ -134,8 +144,6 @@ function Chat() {
             );
         };
     }, [id]);
-
-
 
     // --- MESSAGES AND IMAGES ---
 
@@ -306,14 +314,12 @@ function Chat() {
                 URL.revokeObjectURL(url);
             });
         };
-    }, [id]);
+    }, [id, showNotification]);
 
     // SCROLL TO THE BOTTOM
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({
-            behavior: "smooth"
-        });
-    }, [messages]);
+        scrollToBottom();
+    }, [messages, scrollToBottom]);
 
     // SEND MESSAGE
     async function handleSendMessage(event) {
@@ -699,6 +705,7 @@ function Chat() {
                                                 src={message.mediaUrl}
                                                 alt="Message attachment"
                                                 className="message-image"
+                                                onLoad={scrollToBottom}
                                             />
                                         )}
 
@@ -709,6 +716,7 @@ function Chat() {
                                                 controls
                                                 playsInline
                                                 preload="metadata"
+                                                onLoadedMetadata={scrollToBottom}
                                             />
                                         )}
                                     </div>

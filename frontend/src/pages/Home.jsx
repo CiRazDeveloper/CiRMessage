@@ -1,7 +1,11 @@
 import "./../styles/home.css";
 import "./../styles/switchButton.css";
 
-import { useEffect, useState } from "react";
+import {
+    useCallback,
+    useEffect,
+    useState,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import { axiosInstance } from "../scripts/lib/axios.js";
 import { socket } from "../scripts/lib/socket.js";
@@ -10,7 +14,7 @@ import { setStatus, statuses } from "./../scripts/setStatus.js";
 import StatusDot from "./../components/StatusDot.jsx";
 import SwitchButton from "../components/SwitchButton.jsx";
 import TextInput from "../components/TextInput.jsx";
-import { useNotification } from "../components/NotificationContext.jsx";
+import { useNotification } from "../components/NotificationContext.js";
 
 function Home() {
     const navigate = useNavigate();
@@ -44,22 +48,8 @@ function Home() {
     
 
 
-    // --- GENERAL ---
-    useEffect(() => {        
-        if (activePage === "search") {
-            console.log("Loading contacts...");
-            loadContacts();
-        } else if (activePage === "chats") {
-            console.log("Loading chats...");
-
-            loadChats();
-        }
-    }, [activePage]);
-
-
-
     // --- SEARCH ---
-    async function loadContacts() {
+    const loadContacts = useCallback(async () => {
         try {
             const response =
                 await axiosInstance.get(
@@ -80,7 +70,7 @@ function Home() {
                 "error"
             );
         }
-    }
+    }, [showNotification]);
 
     const searchValue = userSearch
         .trim()
@@ -94,7 +84,7 @@ function Home() {
 
     // --- CHATS ---
     // LOAD
-    async function loadChats() {
+    const loadChats = useCallback(async () => {
         try {
             const response =
                 await axiosInstance.get(
@@ -122,7 +112,22 @@ function Home() {
                 "error"
             );
         }
-    }
+    }, [showNotification]);
+
+    // --- GENERAL ---
+    useEffect(() => {
+        const loadActivePage = async () => {
+            if (activePage === "search") {
+                console.log("Loading contacts...");
+                await loadContacts();
+            } else if (activePage === "chats") {
+                console.log("Loading chats...");
+                await loadChats();
+            }
+        };
+
+        loadActivePage();
+    }, [activePage, loadContacts, loadChats]);
 
     // OTHERS STATUS
     useEffect(() => {
@@ -162,7 +167,7 @@ function Home() {
                 handleStatusChanged
             );
         };
-    }, [chats]);
+    }, [chats, loadChats]);
     
     const chatSearchValue = chatSearch
         .trim()
@@ -231,7 +236,7 @@ function Home() {
                 handleNewMessage
             );
         };
-    }, [chats]);
+    }, [chats, loadChats]);
     
 
     
@@ -300,8 +305,6 @@ function Home() {
 
     useEffect(() => {
         if (activityStatus !== "Online") {
-            setPresenceStatus(activityStatus);
-            
             return;
         }
 
@@ -379,8 +382,6 @@ function Home() {
             "visibilitychange",
             handleVisibilityChange
         );
-
-        setPresenceStatus("Online");
 
         const activityCheckInterval =
             setInterval(
@@ -488,10 +489,6 @@ function Home() {
         const newValue = !isOn;
 
         setIsOn(newValue);
-
-        if (newValue) {
-        } else {
-        }
     };
 
     return (

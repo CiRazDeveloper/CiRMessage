@@ -7,7 +7,7 @@ import { saveUser } from "../storage.js";
 
 import PasswordInput from "../components/PasswordInput.jsx";
 import TextInput from "../components/TextInput.jsx";
-import { useNotification } from "../components/NotificationContext.jsx";
+import { useNotification } from "../components/NotificationContext.js";
 
 function Login() {
     const navigate = useNavigate();

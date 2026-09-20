@@ -1,11 +1,9 @@
 import {
-    createContext,
-    useContext,
+    useCallback,
+    useMemo,
     useState,
 } from "react";
-
-const NotificationContext =
-    createContext(null);
+import { NotificationContext } from "./NotificationContext.js";
 
 export function NotificationProvider({
     children,
@@ -13,11 +11,11 @@ export function NotificationProvider({
     const [notifications, setNotifications] =
         useState([]);
 
-    function showNotification(
+    const showNotification = useCallback((
         message,
         type = "info",
         options = {}
-    ) {
+    ) => {
         const {
             dismiss =
                 type === "info"
@@ -40,39 +38,35 @@ export function NotificationProvider({
         ]);
 
         return id;
-    }
+    }, []);
 
-    function removeNotification(id) {
+    const removeNotification = useCallback((id) => {
         setNotifications((previous) =>
             previous.filter(
                 (notification) =>
                     notification.id !== id
             )
         );
-    }
+    }, []);
+
+    const contextValue = useMemo(
+        () => ({
+            notifications,
+            showNotification,
+            removeNotification,
+        }),
+        [
+            notifications,
+            showNotification,
+            removeNotification,
+        ]
+    );
 
     return (
         <NotificationContext.Provider
-            value={{
-                notifications,
-                showNotification,
-                removeNotification,
-            }}
+            value={contextValue}
         >
             {children}
         </NotificationContext.Provider>
     );
-}
-
-export function useNotification() {
-    const context =
-        useContext(NotificationContext);
-
-    if (!context) {
-        throw new Error(
-            "useNotification must be used inside NotificationProvider"
-        );
-    }
-
-    return context;
 }
