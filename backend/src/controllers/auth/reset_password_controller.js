@@ -102,6 +102,5 @@ async function checkSecret(providedSecret, storedSecret) {
         return "You provided incorrect data!";
     }
 
-
     return null;
 }
