@@ -236,7 +236,7 @@ export const getProfileMedia = async (req, res) => {
     }
 };
 
-export const getMedia = async (req, res) => {
+export const getMessageMedia = async (req, res) => {
     try {
         // Get the message is e.g.: GET /messages/abc123/media -> abc123
         const message =
@@ -293,7 +293,7 @@ export const getMedia = async (req, res) => {
         );
     } catch (error) {
         console.error(
-            "getMedia error:",
+            "getMessageMedia error:",
             error
         );
 
