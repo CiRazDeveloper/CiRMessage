@@ -393,7 +393,29 @@ export const initializeSocket = (server) => {
                         context.callScope
                     );
 
+                if (eventName === "call-ice-candidate") {
+                    console.log("SERVER ICE RECEIVED", {
+                        from: userId,
+                        targetUserIds: context.targetUserIds,
+                        callId: payload.callId,
+                        candidate: payload.candidate?.candidate,
+                        targetUserId: payload.targetUserId,
+                        targetPeerId: payload.targetPeerId,
+                        groupId: payload.groupId,
+                    });
+                }
+
                 context.targetUserIds.forEach((targetUserId) => {
+                    if (eventName === "call-ice-candidate") {
+                        console.log("SERVER ICE FORWARDING", {
+                            from: userId,
+                            to: targetUserId,
+                            room: `user:${targetUserId}`,
+                            callId: payload.callId,
+                            candidate: payload.candidate?.candidate,
+                        });
+                    }
+
                     io.to(`user:${targetUserId}`).emit(
                         eventName,
                         signalingPayload
