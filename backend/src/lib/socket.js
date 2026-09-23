@@ -151,6 +151,10 @@ const createCallPayload = (
     const signalingPayload = {
         ...callScope,
         callerId: socket.user._id.toString(),
+        callerName:
+            socket.user.displayName ||
+            socket.user.username ||
+            "Incoming call",
     };
 
     allowedFields.forEach((field) => {
