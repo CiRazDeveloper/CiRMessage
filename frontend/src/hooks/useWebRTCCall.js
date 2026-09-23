@@ -78,6 +78,40 @@ function descriptionFromSdp(payload) {
     };
 }
 
+function waitForIceGatheringComplete(peer, timeout = 10000) {
+    if (peer.iceGatheringState === "complete") {
+        return Promise.resolve();
+    }
+
+    return new Promise((resolve) => {
+        let settled = false;
+        const finish = () => {
+            if (settled) {
+                return;
+            }
+
+            settled = true;
+            window.clearTimeout(timeoutId);
+            peer.removeEventListener(
+                "icegatheringstatechange",
+                handleStateChange
+            );
+            resolve();
+        };
+        const handleStateChange = () => {
+            if (peer.iceGatheringState === "complete") {
+                finish();
+            }
+        };
+        const timeoutId = window.setTimeout(finish, timeout);
+
+        peer.addEventListener(
+            "icegatheringstatechange",
+            handleStateChange
+        );
+    });
+}
+
 export function useWebRTCCall({
     targetId,
     isGroup = false,
@@ -270,15 +304,24 @@ export function useWebRTCCall({
             });
         };
         if (shouldOffer) {
-            peer.createOffer()
-                .then((offer) => peer.setLocalDescription(offer).then(() => {
+            (async () => {
+                try {
+                    const offer = await peer.createOffer();
+                    await peer.setLocalDescription(offer);
+                    await waitForIceGatheringComplete(peer);
+
                     emitCall("call-offer", {
                         callId,
-                        sdp: offer.sdp,
-                        type: offer.type,
+                        sdp: peer.localDescription.sdp,
+                        type: peer.localDescription.type,
                     }, peerId);
-                }))
-                .catch((error) => console.error("Could not create call offer:", error));
+                } catch (error) {
+                    console.error(
+                        "Could not create call offer:",
+                        error
+                    );
+                }
+            })();
         }
         return peer;
     }, [closePeer, currentUser, emitCall]);
@@ -492,10 +535,11 @@ export function useWebRTCCall({
             await flushPendingIceCandidates(peerId, peer);
             const answer = await peer.createAnswer();
             await peer.setLocalDescription(answer);
+            await waitForIceGatheringComplete(peer);
             emitCall("call-answer", {
                 callId: payload.callId,
-                sdp: answer.sdp,
-                type: answer.type,
+                sdp: peer.localDescription.sdp,
+                type: peer.localDescription.type,
             }, peerId);
             setStatus("connected");
         }
