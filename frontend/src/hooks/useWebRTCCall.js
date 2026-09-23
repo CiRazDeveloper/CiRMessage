@@ -288,10 +288,27 @@ export function useWebRTCCall({
             const pending =
                 pendingIceCandidates.current.get(peerId) || [];
 
+            console.log(
+                `Flushing ${pending.length} ICE candidates for ${peerId}`
+            );
+
             pendingIceCandidates.current.delete(peerId);
 
             for (const candidate of pending) {
-                await peer.addIceCandidate(candidate);
+                try {
+                    await peer.addIceCandidate(candidate);
+
+                    console.log(
+                        "QUEUED REMOTE ICE ADDED:",
+                        candidate.candidate
+                    );
+                } catch (error) {
+                    console.error(
+                        "QUEUED REMOTE ICE FAILED:",
+                        error,
+                        candidate
+                    );
+                }
             }
         },
         []
@@ -500,21 +517,63 @@ export function useWebRTCCall({
             if (!matchesCall(payload) || payload.callerId === userId) {
                 return;
             }
+
+            console.log(
+                "REMOTE ICE RECEIVED:",
+                {
+                    from: payload.callerId,
+                    candidate: payload.candidate?.candidate,
+                    callId: payload.callId,
+                    hasPeer: peersRef.current.has(payload.callerId),
+                }
+            );
+
             const peer = peersRef.current.get(payload.callerId);
+
             if (!payload.candidate) {
+                console.warn("REMOTE ICE payload has no candidate", payload);
                 return;
             }
 
             if (peer?.remoteDescription) {
-                peer.addIceCandidate(payload.candidate).catch((error) => {
-                    console.error("Could not add call ICE candidate:", error);
-                });
+                console.log(
+                    "Adding REMOTE ICE immediately:",
+                    payload.candidate.candidate
+                );
+
+                peer.addIceCandidate(payload.candidate)
+                    .then(() => {
+                        console.log(
+                            "REMOTE ICE ADDED:",
+                            payload.candidate.candidate
+                        );
+                    })
+                    .catch((error) => {
+                        console.error(
+                            "REMOTE ICE ADD FAILED:",
+                            error,
+                            payload.candidate
+                        );
+                    });
+
                 return;
             }
 
+            console.log(
+                "Queuing REMOTE ICE:",
+                {
+                    from: payload.callerId,
+                    hasPeer: Boolean(peer),
+                    remoteDescription: Boolean(peer?.remoteDescription),
+                    candidate: payload.candidate.candidate,
+                }
+            );
+
             const pending =
                 pendingIceCandidates.current.get(payload.callerId) || [];
+
             pending.push(payload.candidate);
+
             pendingIceCandidates.current.set(
                 payload.callerId,
                 pending
