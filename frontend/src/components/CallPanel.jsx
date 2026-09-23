@@ -48,6 +48,7 @@ export default function CallPanel({ call, participantNames = new Map() }) {
         isMuted,
         isCameraOff,
         isScreenSharing,
+        screenStream,
         startCall,
         acceptCall,
         rejectCall,
@@ -89,6 +90,13 @@ export default function CallPanel({ call, participantNames = new Map() }) {
                             Reject
                         </button>
                     </div>
+                </div>
+            )}
+
+            {isScreenSharing && screenStream && (
+                <div className="call-screen-preview">
+                    <MediaElement stream={screenStream} video muted />
+                    <span>You are sharing your screen</span>
                 </div>
             )}
 
@@ -135,14 +143,19 @@ export default function CallPanel({ call, participantNames = new Map() }) {
                 </button>
 
                 {callType === "video" && (
-                    <>
-                        <button type="button" onClick={toggleCamera}>
-                            {isCameraOff ? "Camera on" : "Camera off"}
-                        </button>
-                        <button type="button" onClick={toggleScreenShare}>
-                            {isScreenSharing ? "Stop sharing" : "Share screen"}
-                        </button>
-                    </>
+                    <button type="button" onClick={toggleCamera}>
+                        {isCameraOff ? "Camera on" : "Camera off"}
+                    </button>
+                )}
+
+                {(status === "connecting" || status === "connected") && (
+                    <button
+                        type="button"
+                        className={isScreenSharing ? "call-screen-active" : ""}
+                        onClick={toggleScreenShare}
+                    >
+                        {isScreenSharing ? "Stop sharing" : "Share screen"}
+                    </button>
                 )}
 
                 <button type="button" className="call-danger" onClick={endCall}>
