@@ -126,10 +126,13 @@ export function useWebRTCCall({
 
         const cameraTrack = localStreamRef.current?.getVideoTracks()[0] || null;
         for (const peer of peersRef.current.values()) {
-            const videoTransceiver = peer
-                .getTransceivers()
-                .find((item) => item.receiver?.track?.kind === "video");
-            const sender = videoTransceiver?.sender;
+            const sender = [...peer.getSenders()]
+                .reverse()
+                .find(
+                    (item) =>
+                        item.track === screenTrack ||
+                        item.track?.kind === "video"
+                );
 
             if (sender) {
                 await sender.replaceTrack(cameraTrack);
@@ -234,12 +237,6 @@ export function useWebRTCCall({
 
             for (const track of localStreamRef.current?.getTracks() || []) {
                 peer.addTrack(track, localStreamRef.current);
-            }
-
-            if (!localStreamRef.current?.getVideoTracks().length) {
-                peer.addTransceiver("video", {
-                    direction: "sendrecv",
-                });
             }
 
             peer.onicecandidate = ({ candidate }) => {
@@ -433,22 +430,37 @@ export function useWebRTCCall({
         screenTrackRef.current = screenTrack;
         setScreenStream(displayStream);
 
-        for (const peer of peersRef.current.values()) {
-            const videoTransceiver = peer
-                .getTransceivers()
-                .find((item) => item.receiver?.track?.kind === "video");
-            const sender = videoTransceiver?.sender;
+        for (const [peerId, peer] of peersRef.current.entries()) {
+            const videoSender = peer
+                .getSenders()
+                .find((item) => item.track?.kind === "video");
 
-            if (sender) {
-                await sender.replaceTrack(screenTrack);
+            if (videoSender) {
+                await videoSender.replaceTrack(screenTrack);
+                continue;
             }
+
+            peer.addTrack(screenTrack, displayStream);
+
+            const offer = await peer.createOffer();
+            await peer.setLocalDescription(offer);
+
+            emitSignal(
+                "call-offer",
+                {
+                    callId: callIdRef.current,
+                    type: peer.localDescription.type,
+                    sdp: peer.localDescription.sdp,
+                },
+                peerId
+            );
         }
 
         screenTrack.onended = () => {
             stopScreenShare().catch(console.error);
         };
         setIsScreenSharing(true);
-    }, [stopScreenShare]);
+    }, [emitSignal, stopScreenShare]);
 
     useEffect(() => {
         if (!enabled || !currentUserId || !targetId) {
