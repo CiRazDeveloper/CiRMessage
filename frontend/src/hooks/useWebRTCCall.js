@@ -125,7 +125,7 @@ export function useWebRTCCall({
         screenTrackRef.current = null;
 
         const cameraTrack = localStreamRef.current?.getVideoTracks()[0] || null;
-        for (const peer of peersRef.current.values()) {
+        for (const [peerId, peer] of peersRef.current.entries()) {
             const sender = [...peer.getSenders()]
                 .reverse()
                 .find(
@@ -134,15 +134,43 @@ export function useWebRTCCall({
                         item.track?.kind === "video"
                 );
 
-            if (sender) {
-                await sender.replaceTrack(cameraTrack);
+            if (!sender) {
+                continue;
             }
+
+            if (cameraTrack) {
+                await sender.replaceTrack(cameraTrack);
+                continue;
+            }
+
+            const transceiver = peer
+                .getTransceivers()
+                .find((item) => item.sender === sender);
+
+            if (transceiver) {
+                transceiver.direction = "recvonly";
+            } else {
+                await sender.replaceTrack(null);
+            }
+
+            const offer = await peer.createOffer();
+            await peer.setLocalDescription(offer);
+
+            emitSignal(
+                "call-offer",
+                {
+                    callId: callIdRef.current,
+                    type: peer.localDescription.type,
+                    sdp: peer.localDescription.sdp,
+                },
+                peerId
+            );
         }
 
         setScreenStream(null);
         setIsScreenSharing(false);
         setScreenStream(null);
-    }, []);
+    }, [emitSignal]);
 
     const resetCall = useCallback(() => {
         for (const peer of peersRef.current.values()) {
