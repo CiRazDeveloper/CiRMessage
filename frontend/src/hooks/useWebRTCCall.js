@@ -180,10 +180,18 @@ export function useWebRTCCall({
         });
         peer.onicecandidate = ({ candidate }) => {
             if (candidate) {
+                console.log(
+                    `LOCAL ICE for ${peerId}:`,
+                    candidate.candidate
+                );
                 emitCall("call-ice-candidate", {
                     callId,
                     candidate: candidate.toJSON ? candidate.toJSON() : candidate,
                 }, peerId);
+            } else {
+                console.log(
+                    `ICE gathering finished for ${peerId}`
+                );
             }
         };
         peer.ontrack = ({ track, streams }) => {
@@ -211,9 +219,36 @@ export function useWebRTCCall({
             }));
         };
         peer.onconnectionstatechange = () => {
+            console.log(
+                "Connection state:",
+                peer.connectionState,
+                `(${peerId})`
+            );
             if (["failed", "closed", "disconnected"].includes(peer.connectionState)) {
                 closePeer(peerId);
             }
+        };
+        peer.oniceconnectionstatechange = () => {
+            console.log(
+                "ICE connection state:",
+                peer.iceConnectionState,
+                `(${peerId})`
+            );
+        };
+        peer.onicegatheringstatechange = () => {
+            console.log(
+                "ICE gathering state:",
+                peer.iceGatheringState,
+                `(${peerId})`
+            );
+        };
+        peer.onicecandidateerror = (event) => {
+            console.error("ICE candidate error:", {
+                url: event.url,
+                errorCode: event.errorCode,
+                errorText: event.errorText,
+                peerId,
+            });
         };
         if (shouldOffer) {
             peer.createOffer()
