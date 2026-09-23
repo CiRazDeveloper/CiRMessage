@@ -50,7 +50,7 @@ const messageSchema = new mongoose.Schema(
     }
 );
 
-messageSchema.pre("validate", function (next) {
+messageSchema.pre("validate", function () {
     const hasReceiver = Boolean(this.receiverId);
     const hasGroup = Boolean(this.groupId);
 
@@ -61,7 +61,6 @@ messageSchema.pre("validate", function (next) {
         );
     }
 
-    next();
 });
 
 const mod_message = mongoose.model(
