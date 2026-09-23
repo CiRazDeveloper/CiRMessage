@@ -46,6 +46,7 @@ export function useWebRTCCall({
     initialIncomingCall = null,
 }) {
     const currentUserId = getId(currentUser);
+    const canShareScreen = Boolean(navigator.mediaDevices?.getDisplayMedia);
 
     const [status, setStatus] = useState("idle");
     const [incomingCall, setIncomingCall] = useState(initialIncomingCall);
@@ -691,6 +692,7 @@ export function useWebRTCCall({
         isCameraOff,
         isScreenSharing,
         screenStream,
+        canShareScreen,
         startCall,
         acceptCall,
         rejectCall,
