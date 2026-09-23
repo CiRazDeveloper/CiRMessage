@@ -16,6 +16,8 @@ import {
     getMaxMediaSize,
     prepareMediaForUpload,
 } from "../scripts/media.js";
+import { useWebRTCCall } from "../hooks/useWebRTCCall.js";
+import CallPanel from "../components/CallPanel.jsx";
 
 function Chat() {
     const navigate = useNavigate();
@@ -39,6 +41,16 @@ function Chat() {
     const messageInputRef = useRef(null);
     const deliveredMessageIdsRef = useRef(new Set());
     const latestSeenAtRef = useRef(null);
+    const callParticipants = isGroup
+        ? (group?.members || [])
+        : (user ? [user] : []);
+    const call = useWebRTCCall({
+        targetId: id,
+        isGroup,
+        participants: callParticipants,
+        currentUser,
+        enabled: Boolean(id),
+    });
 
     const scrollToBottom = useCallback(() => {
         messagesEndRef.current?.scrollIntoView({
@@ -714,6 +726,11 @@ function Chat() {
                     </div>
                 </div>
             </header>
+
+            <CallPanel
+                call={call}
+                participantNames={call.participantMap}
+            />
 
             <div className="chat-messages">
                 {messages.map((message, index) => {

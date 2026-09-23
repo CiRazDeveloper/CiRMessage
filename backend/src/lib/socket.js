@@ -1,5 +1,6 @@
 import { Server } from "socket.io";
 import { parse } from "cookie";
+import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 
 import { getAllowedOrigins } from "./cors.js";
@@ -9,6 +10,163 @@ import mod_user from "../models/mod_user.js";
 import mod_group from "../models/mod_group.js";
 
 let io;
+
+const getCallTarget = (payload = {}) => ({
+    targetUserId:
+        payload.targetUserId ||
+        payload.targetId ||
+        payload.userId ||
+        payload.peerUserId ||
+        payload.calleeId,
+    targetPeerId: payload.targetPeerId,
+    groupId: payload.groupId,
+});
+
+const isValidId = (id) =>
+    typeof id === "string" &&
+    mongoose.Types.ObjectId.isValid(id);
+
+const findCallContext = async (userId, payload) => {
+    const { targetUserId, targetPeerId, groupId } =
+        getCallTarget(payload);
+
+    if (targetUserId && groupId) {
+        return {
+            error: "Choose a direct user or a group, not both",
+        };
+    }
+
+    if (targetUserId) {
+        if (
+            !isValidId(targetUserId) ||
+            targetUserId === userId
+        ) {
+            return {
+                error: "Invalid call recipient",
+            };
+        }
+
+        const relationship =
+            await mod_message.exists({
+                $or: [
+                    {
+                        senderId: userId,
+                        receiverId: targetUserId,
+                    },
+                    {
+                        senderId: targetUserId,
+                        receiverId: userId,
+                    },
+                ],
+            });
+
+        if (!relationship) {
+            return {
+                error:
+                    "Direct calls require an existing direct message relationship",
+            };
+        }
+
+        return {
+            targetUserIds: [targetUserId],
+            callScope: {
+                type: "direct",
+                targetUserId,
+                targetId: targetUserId,
+            },
+        };
+    }
+
+    if (groupId) {
+        if (!isValidId(groupId)) {
+            return {
+                error: "Invalid call group",
+            };
+        }
+
+        const group = await mod_group
+            .findOne({
+                _id: groupId,
+                members: userId,
+            })
+            .select("members");
+
+        if (!group) {
+            return {
+                error:
+                    "Group calls require membership in an existing group",
+            };
+        }
+
+        const memberIds = group.members
+                .map((memberId) => memberId.toString())
+                .filter((memberId) => memberId !== userId),
+            targetUserIds = targetPeerId
+                ? memberIds.filter((memberId) => memberId === targetPeerId)
+                : memberIds;
+
+        if (targetPeerId && targetUserIds.length === 0) {
+            return {
+                error: "Call peer is not a member of this group",
+            };
+        }
+
+        return {
+            targetUserIds,
+            callScope: {
+                type: "group",
+                groupId,
+            },
+        };
+    }
+
+    return {
+        error: "A call recipient or group is required",
+    };
+};
+
+const createCallPayload = (
+    socket,
+    payload,
+    callScope
+) => {
+    const allowedFields = [
+        "callId",
+        "callType",
+        "caller",
+        "offer",
+        "answer",
+        "sdp",
+        "candidate",
+        "sdpMid",
+        "sdpMLineIndex",
+        "usernameFragment",
+        "peerId",
+        "participantId",
+        "targetPeerId",
+        "screenSharing",
+        "enabled",
+    ];
+
+    const signalingPayload = {
+        ...callScope,
+        callerId: socket.user._id.toString(),
+    };
+
+    allowedFields.forEach((field) => {
+        if (payload[field] !== undefined) {
+            signalingPayload[field] = payload[field];
+        }
+    });
+
+    return signalingPayload;
+};
+
+const registerCallSignaling = (socket, eventNames, handler) => {
+    eventNames.forEach((eventName) => {
+        socket.on(eventName, handler);
+    });
+};
 
 export const getIO = () => {
     if (!io) {
@@ -164,6 +322,146 @@ export const initializeSocket = (server) => {
             });
         });
 
+        const startCall = async (payload = {}, callback) => {
+            try {
+                const context = await findCallContext(
+                    userId,
+                    payload
+                );
+
+                if (context.error) {
+                    callback?.({
+                        success: false,
+                        message: context.error,
+                    });
+                    return;
+                }
+
+                const signalingPayload =
+                    createCallPayload(
+                        socket,
+                        payload,
+                        context.callScope
+                    );
+
+                context.targetUserIds.forEach((targetUserId) => {
+                    io.to(`user:${targetUserId}`).emit(
+                        "call-invite",
+                        signalingPayload
+                    );
+                });
+
+                callback?.({
+                    success: true,
+                    ...context.callScope,
+                });
+            } catch (error) {
+                console.error(
+                    "Could not start call:",
+                    error
+                );
+                callback?.({
+                    success: false,
+                    message: "Could not start call",
+                });
+            }
+        };
+
+        const forwardCallSignal = async (
+            eventName,
+            payload = {},
+            callback
+        ) => {
+            try {
+                const context = await findCallContext(
+                    userId,
+                    payload
+                );
+
+                if (context.error) {
+                    callback?.({
+                        success: false,
+                        message: context.error,
+                    });
+                    return;
+                }
+
+                const signalingPayload =
+                    createCallPayload(
+                        socket,
+                        payload,
+                        context.callScope
+                    );
+
+                context.targetUserIds.forEach((targetUserId) => {
+                    io.to(`user:${targetUserId}`).emit(
+                        eventName,
+                        signalingPayload
+                    );
+                });
+
+                callback?.({ success: true });
+            } catch (error) {
+                console.error(
+                    `Could not forward ${eventName}:`,
+                    error
+                );
+                callback?.({
+                    success: false,
+                    message: "Could not forward call signal",
+                });
+            }
+        };
+
+        registerCallSignaling(socket, ["call-invite"], startCall);
+        registerCallSignaling(
+            socket,
+            ["call-accept"],
+            (payload, callback) =>
+                forwardCallSignal(
+                    "call-accept",
+                    payload,
+                    callback
+                )
+        );
+        registerCallSignaling(
+            socket,
+            ["call-reject"],
+            (payload, callback) =>
+                forwardCallSignal(
+                    "call-reject",
+                    payload,
+                    callback
+                )
+        );
+        registerCallSignaling(
+            socket,
+            ["call-end"],
+            (payload, callback) =>
+                forwardCallSignal(
+                    "call-end",
+                    payload,
+                    callback
+                )
+        );
+        [
+            "call-offer",
+            "call-answer",
+            "call-ice-candidate",
+            "call-screen-share",
+        ].forEach((eventName) => {
+            registerCallSignaling(
+                socket,
+                [eventName],
+                (payload, callback) =>
+                    forwardCallSignal(
+                        eventName,
+                        payload,
+                        callback
+                    )
+            );
+        });
+
        socket.on("message-delivered", async (messageId, callback) => {
                 try {
                     const receiverId =
@@ -244,47 +542,6 @@ export const initializeSocket = (server) => {
                             }
                         );
 
-                        socket.on("group-message-read", async (groupId, callback) => {
-                            try {
-                                const group = await mod_group.findOne({
-                                    _id: groupId,
-                                    members: socket.user._id,
-                                }).select("_id");
-
-                                if (!group) {
-                                    callback?.({
-                                        success: false,
-                                        message: "Group not found or access denied",
-                                    });
-                                    return;
-                                }
-
-                                const result = await mod_message.updateMany(
-                                    {
-                                        groupId: group._id,
-                                        senderId: { $ne: socket.user._id },
-                                        readBy: { $ne: socket.user._id },
-                                    },
-                                    {
-                                        $addToSet: {
-                                            readBy: socket.user._id,
-                                        },
-                                    }
-                                );
-
-                                callback?.({
-                                    success: true,
-                                    modifiedCount: result.modifiedCount,
-                                });
-                            } catch (error) {
-                                console.error(
-                                    "Could not mark group messages as read:",
-                                    error
-                                );
-                                callback?.({ success: false });
-                            }
-                        });
-
                     io.to(
                         `user:${senderId}`
                     ).emit(
@@ -296,6 +553,47 @@ export const initializeSocket = (server) => {
                                 seenAt.toISOString(),
                         }
                     );
+
+                    socket.on("group-message-read", async (groupId, callback) => {
+                        try {
+                            const group = await mod_group.findOne({
+                                _id: groupId,
+                                members: socket.user._id,
+                            }).select("_id");
+
+                            if (!group) {
+                                callback?.({
+                                    success: false,
+                                    message: "Group not found or access denied",
+                                });
+                                return;
+                            }
+
+                            const result = await mod_message.updateMany(
+                                {
+                                    groupId: group._id,
+                                    senderId: { $ne: socket.user._id },
+                                    readBy: { $ne: socket.user._id },
+                                },
+                                {
+                                    $addToSet: {
+                                        readBy: socket.user._id,
+                                    },
+                                }
+                            );
+
+                            callback?.({
+                                success: true,
+                                modifiedCount: result.modifiedCount,
+                            });
+                        } catch (error) {
+                            console.error(
+                                "Could not mark group messages as read:",
+                                error
+                            );
+                            callback?.({ success: false });
+                        }
+                    });
 
                     callback?.({
                         success: true,
