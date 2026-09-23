@@ -108,11 +108,15 @@ const emitNewGroupMessage = async (groupId, message) => {
         return;
     }
 
-    group.members.forEach((memberId) => {
+    group.members
+        .filter((memberId) =>
+            memberId.toString() !== message.senderId.toString()
+        )
+        .forEach((memberId) => {
         getIO()
             .to(`user:${memberId.toString()}`)
             .emit("new-message", message);
-    });
+        });
 };
 
 export const sendMessage = async (req, res) => {

@@ -9,6 +9,7 @@ import {
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { axiosInstance } from "../scripts/lib/axios.js";
 import { socket } from "../scripts/lib/socket.js";
+import { getUser } from "../storage.js";
 import StatusDot from "./../components/StatusDot.jsx";
 import { useNotification } from "../components/NotificationContext.js";
 import {
@@ -23,6 +24,7 @@ function Chat() {
     const { id } = useParams();
 
     const user = location.state?.user;
+    const currentUser = getUser();
     const [loadedGroup, setLoadedGroup] = useState(null);
     const group = location.state?.group || loadedGroup;
     const isGroup = Boolean(location.state?.group) ||
@@ -189,7 +191,15 @@ function Chat() {
                 ? message.groupId?.toString() === id
                 : message.senderId?.toString() === id;
 
-            if (!belongsToChat || message.isMine) {
+            const isSentByCurrentUser =
+                message.senderId?.toString() ===
+                currentUser?._id?.toString();
+
+            if (
+                !belongsToChat ||
+                message.isMine ||
+                (isGroup && isSentByCurrentUser)
+            ) {
                 return;
             }
 
@@ -247,7 +257,11 @@ function Chat() {
                 return [
                     ...previousMessages,
                     receivedMessage,
-                ];
+                ].sort(
+                    (left, right) =>
+                        new Date(left.createdAt) -
+                        new Date(right.createdAt)
+                );
             });
         }
 
@@ -266,7 +280,7 @@ function Chat() {
                 URL.revokeObjectURL(url);
             });
         };
-    }, [id, isGroup]);
+    }, [currentUser?._id, id, isGroup]);
 
     // LOAD
     useEffect(() => {
@@ -323,7 +337,13 @@ function Chat() {
                         )
                     );
 
-                setMessages(loadedMessages);
+                setMessages(
+                    loadedMessages.sort(
+                        (left, right) =>
+                            new Date(left.createdAt) -
+                            new Date(right.createdAt)
+                    )
+                );
 
                 if (!isGroup) {
                     socket.emit("message-read", id);
@@ -437,12 +457,22 @@ function Chat() {
 
             newMessage.isMine = true;
 
-            setMessages(
-                (previousMessages) => [
-                    ...previousMessages,
+            setMessages((previousMessages) => {
+                const withoutDuplicate =
+                    previousMessages.filter(
+                        (message) =>
+                            message._id !== newMessage._id
+                    );
+
+                return [
+                    ...withoutDuplicate,
                     newMessage,
-                ]
-            );
+                ].sort(
+                    (left, right) =>
+                        new Date(left.createdAt) -
+                        new Date(right.createdAt)
+                );
+            });
 
             setMessageText("");
             setSelectedMedia(null);
