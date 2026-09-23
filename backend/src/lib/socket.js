@@ -257,19 +257,9 @@ export const initializeSocket = (server) => {
 
         presence.sockets.add(socket.id);
 
-        console.log(
-            `User connected: ${socket.user.username} (${userId})`
-        );
 
-        console.log(
-            `Status: ${presence.status}`
-        );
 
         socket.on("set-status", (status, callback) => {
-            console.log(
-                `Received set-status from ${socket.user.username}:`,
-                status
-            );
 
             const allowedStatuses = [
                 "Online",
@@ -299,9 +289,6 @@ export const initializeSocket = (server) => {
 
             currentPresence.status = status;
 
-            console.log(
-                `User ${socket.user.username} changed status to ${status}`
-            );
 
             io.emit("user-status-changed", {
                 userId,
@@ -394,26 +381,10 @@ export const initializeSocket = (server) => {
                     );
 
                 if (eventName === "call-ice-candidate") {
-                    console.log("SERVER ICE RECEIVED", {
-                        from: userId,
-                        targetUserIds: context.targetUserIds,
-                        callId: payload.callId,
-                        candidate: payload.candidate?.candidate,
-                        targetUserId: payload.targetUserId,
-                        targetPeerId: payload.targetPeerId,
-                        groupId: payload.groupId,
-                    });
                 }
 
                 context.targetUserIds.forEach((targetUserId) => {
                     if (eventName === "call-ice-candidate") {
-                        console.log("SERVER ICE FORWARDING", {
-                            from: userId,
-                            to: targetUserId,
-                            room: `user:${targetUserId}`,
-                            callId: payload.callId,
-                            candidate: payload.candidate?.candidate,
-                        });
                     }
 
                     io.to(`user:${targetUserId}`).emit(
@@ -674,9 +645,6 @@ export const initializeSocket = (server) => {
                     status: "Offline",
                 });
 
-                console.log(
-                    `User offline: ${socket.user.username}`
-                );
             }
         });
     });
