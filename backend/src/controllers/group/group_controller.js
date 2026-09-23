@@ -172,6 +172,19 @@ export const getGroupMessages = async (req, res) => {
                 .json({ message: "Group not found or access denied" });
         }
 
+        await mod_message.updateMany(
+            {
+                groupId: group._id,
+                senderId: { $ne: req.user._id },
+                readBy: { $ne: req.user._id },
+            },
+            {
+                $addToSet: {
+                    readBy: req.user._id,
+                },
+            }
+        );
+
         const messages = await mod_message.find({
             groupId: group._id,
         })

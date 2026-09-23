@@ -284,15 +284,22 @@ function Home() {
                 return;
             }
 
-            const existingChat = chats.find((chat) =>
-                chat.type === "group"
-                    ? chat.members?.some(
-                        (member) =>
-                            member._id?.toString() === senderId ||
-                            member.toString?.() === senderId
-                    )
-                    : (chat.user?._id || chat._id).toString() === senderId
-            );
+            const existingChat = message.groupId
+                ? chats.find(
+                    (chat) =>
+                        chat.type === "group" &&
+                        chat._id.toString() ===
+                            message.groupId.toString()
+                )
+                : chats.find((chat) =>
+                    chat.type === "group"
+                        ? chat.members?.some(
+                            (member) =>
+                                member._id?.toString() === senderId ||
+                                member.toString?.() === senderId
+                        )
+                        : (chat.user?._id || chat._id).toString() === senderId
+                );
 
             if (existingChat) {
                 setUnreadCounts((previous) => ({

@@ -6,6 +6,7 @@ import { getAllowedOrigins } from "./cors.js";
 
 import mod_message from "../models/mod_message.js";
 import mod_user from "../models/mod_user.js";
+import mod_group from "../models/mod_group.js";
 
 let io;
 
@@ -242,6 +243,47 @@ export const initializeSocket = (server) => {
                                 },
                             }
                         );
+
+                        socket.on("group-message-read", async (groupId, callback) => {
+                            try {
+                                const group = await mod_group.findOne({
+                                    _id: groupId,
+                                    members: socket.user._id,
+                                }).select("_id");
+
+                                if (!group) {
+                                    callback?.({
+                                        success: false,
+                                        message: "Group not found or access denied",
+                                    });
+                                    return;
+                                }
+
+                                const result = await mod_message.updateMany(
+                                    {
+                                        groupId: group._id,
+                                        senderId: { $ne: socket.user._id },
+                                        readBy: { $ne: socket.user._id },
+                                    },
+                                    {
+                                        $addToSet: {
+                                            readBy: socket.user._id,
+                                        },
+                                    }
+                                );
+
+                                callback?.({
+                                    success: true,
+                                    modifiedCount: result.modifiedCount,
+                                });
+                            } catch (error) {
+                                console.error(
+                                    "Could not mark group messages as read:",
+                                    error
+                                );
+                                callback?.({ success: false });
+                            }
+                        });
 
                     io.to(
                         `user:${senderId}`

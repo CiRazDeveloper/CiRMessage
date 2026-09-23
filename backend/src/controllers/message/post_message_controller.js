@@ -86,6 +86,9 @@ const createMessage = async ({
         senderId,
         receiverId,
         groupId,
+        ...(groupId && {
+            readBy: [senderId],
+        }),
         text: text?.trim() || undefined,
         media: media?.mediaKey,
         mediaType: media?.mediaType,

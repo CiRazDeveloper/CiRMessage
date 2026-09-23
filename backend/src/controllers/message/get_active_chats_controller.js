@@ -74,10 +74,42 @@ export const getActiveChats = async (req, res) => {
             .sort({ updatedAt: -1 })
             .lean();
 
+        const groupUnreadMessages = await mod_message.aggregate([
+            {
+                $match: {
+                    groupId: {
+                        $in: groups.map((group) => group._id),
+                    },
+                    senderId: {
+                        $ne: loggedInUserId,
+                    },
+                    readBy: {
+                        $ne: loggedInUserId,
+                    },
+                },
+            },
+            {
+                $group: {
+                    _id: "$groupId",
+                    unreadCount: {
+                        $sum: 1,
+                    },
+                },
+            },
+        ]);
+
+        const groupUnreadCountMap = {};
+
+        groupUnreadMessages.forEach((entry) => {
+            groupUnreadCountMap[entry._id.toString()] =
+                entry.unreadCount;
+        });
+
         const groupChats = groups.map((group) => ({
             ...group,
             type: "group",
-            unreadCount: 0,
+            unreadCount:
+                groupUnreadCountMap[group._id.toString()] || 0,
         }));
 
         return res

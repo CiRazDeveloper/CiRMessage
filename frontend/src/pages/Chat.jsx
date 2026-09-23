@@ -203,9 +203,10 @@ function Chat() {
                 return;
             }
 
-            if (!isGroup) {
-                socket.emit("message-read", message.senderId);
-            }
+            socket.emit(
+                isGroup ? "group-message-read" : "message-read",
+                isGroup ? id : message.senderId
+            );
 
             let receivedMessage = {
                 ...message,
@@ -345,9 +346,10 @@ function Chat() {
                     )
                 );
 
-                if (!isGroup) {
-                    socket.emit("message-read", id);
-                }
+                socket.emit(
+                    isGroup ? "group-message-read" : "message-read",
+                    id
+                );
             } catch (error) {
                 console.error(
                     "Could not load messages:",
