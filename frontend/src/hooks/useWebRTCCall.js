@@ -55,6 +55,7 @@ export function useWebRTCCall({
     const [isMuted, setIsMuted] = useState(false);
     const [isCameraOff, setIsCameraOff] = useState(false);
     const [isScreenSharing, setIsScreenSharing] = useState(false);
+    const [screenStream, setScreenStream] = useState(null);
 
     const callIdRef = useRef(null);
     const callTypeRef = useRef("video");
@@ -125,15 +126,19 @@ export function useWebRTCCall({
 
         const cameraTrack = localStreamRef.current?.getVideoTracks()[0] || null;
         for (const peer of peersRef.current.values()) {
-            const sender = peer
-                .getSenders()
-                .find((item) => item.track?.kind === "video");
-            if (sender && cameraTrack) {
+            const videoTransceiver = peer
+                .getTransceivers()
+                .find((item) => item.receiver?.track?.kind === "video");
+            const sender = videoTransceiver?.sender;
+
+            if (sender) {
                 await sender.replaceTrack(cameraTrack);
             }
         }
 
+        setScreenStream(null);
         setIsScreenSharing(false);
+        setScreenStream(null);
     }, []);
 
     const resetCall = useCallback(() => {
@@ -229,6 +234,12 @@ export function useWebRTCCall({
 
             for (const track of localStreamRef.current?.getTracks() || []) {
                 peer.addTrack(track, localStreamRef.current);
+            }
+
+            if (!localStreamRef.current?.getVideoTracks().length) {
+                peer.addTransceiver("video", {
+                    direction: "sendrecv",
+                });
             }
 
             peer.onicecandidate = ({ candidate }) => {
@@ -410,14 +421,24 @@ export function useWebRTCCall({
 
         const displayStream = await navigator.mediaDevices.getDisplayMedia({
             video: true,
+            audio: false,
         });
         const screenTrack = displayStream.getVideoTracks()[0];
+
+        if (!screenTrack) {
+            displayStream.getTracks().forEach((track) => track.stop());
+            return;
+        }
+
         screenTrackRef.current = screenTrack;
+        setScreenStream(displayStream);
 
         for (const peer of peersRef.current.values()) {
-            const sender = peer
-                .getSenders()
-                .find((item) => item.track?.kind === "video");
+            const videoTransceiver = peer
+                .getTransceivers()
+                .find((item) => item.receiver?.track?.kind === "video");
+            const sender = videoTransceiver?.sender;
+
             if (sender) {
                 await sender.replaceTrack(screenTrack);
             }
@@ -629,6 +650,7 @@ export function useWebRTCCall({
         isMuted,
         isCameraOff,
         isScreenSharing,
+        screenStream,
         startCall,
         acceptCall,
         rejectCall,
