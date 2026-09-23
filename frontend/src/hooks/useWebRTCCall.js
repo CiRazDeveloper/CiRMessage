@@ -43,11 +43,12 @@ export function useWebRTCCall({
     participants = [],
     currentUser,
     enabled = true,
+    initialIncomingCall = null,
 }) {
     const currentUserId = getId(currentUser);
 
     const [status, setStatus] = useState("idle");
-    const [incomingCall, setIncomingCall] = useState(null);
+    const [incomingCall, setIncomingCall] = useState(initialIncomingCall);
     const [localStream, setLocalStream] = useState(null);
     const [remoteStreams, setRemoteStreams] = useState({});
     const [callType, setCallType] = useState("video");
@@ -61,6 +62,20 @@ export function useWebRTCCall({
     const peersRef = useRef(new Map());
     const pendingIceRef = useRef(new Map());
     const screenTrackRef = useRef(null);
+    const initialIncomingCallRef = useRef(initialIncomingCall);
+
+    useEffect(() => {
+        const incoming = initialIncomingCallRef.current;
+        if (!incoming?.callId || callIdRef.current) {
+            return;
+        }
+
+        callIdRef.current = incoming.callId;
+        callTypeRef.current = incoming.callType || "video";
+        setCallType(callTypeRef.current);
+        setIncomingCall(incoming);
+        setStatus("ringing");
+    }, []);
 
     const participantNames = useMemo(() => {
         const names = new Map();
