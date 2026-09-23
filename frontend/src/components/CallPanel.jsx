@@ -1,5 +1,106 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+function RemoteVideoTile({ stream, name }) {
+    const wrapperRef = useRef(null);
+    const [hidden, setHidden] = useState(false);
+    const [hasLiveVideo, setHasLiveVideo] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(false);
+
+    useEffect(() => {
+        setHidden(false);
+
+        const updateVideoState = () => {
+            setHasLiveVideo(
+                stream
+                    ?.getVideoTracks()
+                    .some((track) => track.readyState === "live") || false
+            );
+        };
+
+        updateVideoState();
+        const tracks = stream?.getVideoTracks() || [];
+        tracks.forEach((track) => {
+            track.addEventListener("ended", updateVideoState);
+            track.addEventListener("mute", updateVideoState);
+            track.addEventListener("unmute", updateVideoState);
+        });
+
+        return () => {
+            tracks.forEach((track) => {
+                track.removeEventListener("ended", updateVideoState);
+                track.removeEventListener("mute", updateVideoState);
+                track.removeEventListener("unmute", updateVideoState);
+            });
+        };
+    }, [stream]);
+
+    useEffect(() => {
+        const onFullscreenChange = () => {
+            setIsFullscreen(document.fullscreenElement === wrapperRef.current);
+        };
+
+        document.addEventListener("fullscreenchange", onFullscreenChange);
+        return () =>
+            document.removeEventListener("fullscreenchange", onFullscreenChange);
+    }, []);
+
+    const openFullscreen = async () => {
+        if (!wrapperRef.current?.requestFullscreen) return;
+
+        try {
+            await wrapperRef.current.requestFullscreen();
+            if (screen.orientation?.lock) {
+                try {
+                    await screen.orientation.lock("any");
+                } catch {
+                    // The browser can still follow device orientation naturally.
+                }
+            }
+        } catch (error) {
+            console.error("Could not enter screen-share fullscreen:", error);
+        }
+    };
+
+    const closeFullscreen = async () => {
+        if (document.fullscreenElement && document.exitFullscreen) {
+            await document.exitFullscreen();
+        }
+    };
+
+    if (hidden) return null;
+
+    return (
+        <div
+            ref={wrapperRef}
+            className={`call-video-tile call-remote-video ${hasLiveVideo ? "" : "call-video-ended"}`}
+        >
+            <MediaElement stream={stream} video />
+            <span>{hasLiveVideo ? name : "Screen sharing ended"}</span>
+            <div className="call-video-actions">
+                {hasLiveVideo && !isFullscreen && (
+                    <button type="button" onClick={openFullscreen}>
+                        Full screen
+                    </button>
+                )}
+                {isFullscreen && (
+                    <button type="button" onClick={closeFullscreen}>
+                        Exit full screen
+                    </button>
+                )}
+                {!isFullscreen && (
+                    <button
+                        type="button"
+                        aria-label="Close shared screen"
+                        onClick={() => setHidden(true)}
+                    >
+                        ✕
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+}
+
 function MediaElement({ stream, video = false, muted = false }) {
     const ref = useRef(null);
     const [blocked, setBlocked] = useState(false);
@@ -109,20 +210,18 @@ export default function CallPanel({ call, participantNames = new Map() }) {
                         </div>
                     )}
 
-                    {Object.entries(remoteStreams).map(([id, stream]) => {
-                        const hasVideo = stream
-                            .getVideoTracks()
-                            .some((track) => track.readyState === "live");
-
-                        return hasVideo ? (
-                            <div className="call-video-tile" key={id}>
-                                <MediaElement stream={stream} video />
-                                <span>
-                                    {participantNames.get(id)?.name || "Participant"}
-                                </span>
-                            </div>
-                        ) : null;
-                    })}
+                    {Object.entries(remoteStreams).map(([id, stream]) =>
+                        stream.getVideoTracks().length > 0 ? (
+                            <RemoteVideoTile
+                                key={id}
+                                stream={stream}
+                                name={
+                                    participantNames.get(id)?.name ||
+                                    "Participant"
+                                }
+                            />
+                        ) : null
+                    )}
                 </div>
             )}
 
