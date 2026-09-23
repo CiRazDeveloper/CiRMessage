@@ -70,7 +70,7 @@ const findCallContext = async (userId, payload) => {
         return {
             targetUserIds: [targetUserId],
             callScope: {
-                type: "direct",
+                scope: "direct",
                 targetUserId,
                 targetId: targetUserId,
             },
@@ -114,7 +114,7 @@ const findCallContext = async (userId, payload) => {
         return {
             targetUserIds,
             callScope: {
-                type: "group",
+                scope: "group",
                 groupId,
             },
         };

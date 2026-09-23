@@ -17,6 +17,36 @@ function VideoTile({ stream, label, muted = false }) {
     );
 }
 
+function AudioTile({ stream, label }) {
+    const audioRef = useRef(null);
+
+    useEffect(() => {
+        if (!audioRef.current) {
+            return;
+        }
+
+        audioRef.current.srcObject = stream || null;
+        audioRef.current.play().catch((error) => {
+            console.warn(
+                `Could not autoplay audio for ${label}:`,
+                error
+            );
+        });
+    }, [label, stream]);
+
+    return (
+        <div className="call-audio-tile">
+            <audio
+                ref={audioRef}
+                autoPlay
+                controls
+                playsInline
+            />
+            <span>{label}</span>
+        </div>
+    );
+}
+
 function CallPanel({
     call,
     participantNames,
@@ -65,6 +95,20 @@ function CallPanel({
                     <VideoTile stream={localStream} label="You" muted />
                     {Object.entries(remoteStreams).map(([id, stream]) => (
                         <VideoTile key={id} stream={stream} label={participantNames.get(id)?.name || "Participant"} />
+                    ))}
+                </div>
+            )}
+            {callType === "audio" && (
+                <div className="call-audio-list">
+                    {Object.entries(remoteStreams).map(([id, stream]) => (
+                        <AudioTile
+                            key={id}
+                            stream={stream}
+                            label={
+                                participantNames.get(id)?.name ||
+                                "Participant"
+                            }
+                        />
                     ))}
                 </div>
             )}
