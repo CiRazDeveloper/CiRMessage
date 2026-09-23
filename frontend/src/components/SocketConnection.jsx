@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { socket } from "../scripts/lib/socket.js";
+import "../styles/globalCall.css";
 
 function SocketConnection() {
     const navigate = useNavigate();
@@ -47,7 +48,7 @@ function SocketConnection() {
                 ...payload,
                 callerName:
                     payload.callerName ||
-                    "Incoming call",
+                    "Unknown caller",
             });
         }
 
@@ -78,22 +79,7 @@ function SocketConnection() {
         };
     }, [location.pathname]);
 
-    function rejectCall() {
-        if (!incomingCall) {
-            return;
-        }
-
-        socket.emit("call-reject", {
-            callId: incomingCall.callId,
-            ...(incomingCall.groupId
-                ? { groupId: incomingCall.groupId }
-                : { targetUserId: incomingCall.callerId }),
-        });
-
-        setIncomingCall(null);
-    }
-
-    function acceptCall() {
+    function openIncomingCall() {
         if (!incomingCall) {
             return;
         }
@@ -120,26 +106,33 @@ function SocketConnection() {
     }
 
     return incomingCall ? (
-        <div className="global-incoming-call" role="dialog" aria-live="assertive">
-            <div className="global-incoming-call-card">
-                <strong>{incomingCall.callerName}</strong>
-                <span>
-                    Incoming {incomingCall.callType || "video"} call
-                </span>
-                <div className="global-incoming-call-actions">
-                    <button type="button" onClick={acceptCall}>
-                        Accept
-                    </button>
-                    <button
-                        type="button"
-                        className="call-danger"
-                        onClick={rejectCall}
-                    >
-                        Reject
-                    </button>
-                </div>
-            </div>
-        </div>
+        <button
+            type="button"
+            className="global-call-banner"
+            onClick={openIncomingCall}
+            aria-label={`Open incoming call from ${incomingCall.callerName}`}
+        >
+            <span className="global-call-banner-icon" aria-hidden="true">
+                📞
+            </span>
+
+            <span className="global-call-banner-text">
+                <strong>
+                    Receiving call from {incomingCall.callerName}
+                </strong>
+                <small>
+                    {incomingCall.groupId
+                        ? "Group call"
+                        : "Direct call"}
+                    {" · "}
+                    Click to open
+                </small>
+            </span>
+
+            <span className="global-call-banner-arrow" aria-hidden="true">
+                ›
+            </span>
+        </button>
     ) : null;
 }
 
