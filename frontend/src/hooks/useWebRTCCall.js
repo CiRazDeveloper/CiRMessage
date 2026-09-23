@@ -84,6 +84,7 @@ export function useWebRTCCall({
     const callTypeRef = useRef("video");
     const participantMap = useRef(new Map());
     const pendingIceCandidates = useRef(new Map());
+    const remoteMediaStreams = useRef(new Map());
     const participantNames = useMemo(
         () =>
             new Map(
@@ -113,6 +114,7 @@ export function useWebRTCCall({
     const closePeer = useCallback((peerId) => {
         peersRef.current.get(peerId)?.close();
         peersRef.current.delete(peerId);
+        remoteMediaStreams.current.delete(peerId);
         setRemoteStreams((streams) => {
             const next = { ...streams };
             delete next[peerId];
@@ -132,6 +134,7 @@ export function useWebRTCCall({
         }
         peersRef.current.forEach((peer) => peer.close());
         peersRef.current.clear();
+        remoteMediaStreams.current.clear();
         stopLocalMedia();
         screenTrackRef.current?.stop();
         screenTrackRef.current = null;
@@ -183,10 +186,29 @@ export function useWebRTCCall({
                 }, peerId);
             }
         };
-        peer.ontrack = ({ streams }) => {
-            if (streams[0]) {
-                setRemoteStreams((current) => ({ ...current, [peerId]: streams[0] }));
+        peer.ontrack = ({ track, streams }) => {
+            let remoteStream = remoteMediaStreams.current.get(peerId);
+
+            if (!remoteStream) {
+                remoteStream = streams[0] || new MediaStream();
+                remoteMediaStreams.current.set(peerId, remoteStream);
             }
+
+            if (!remoteStream.getTracks().some((item) => item.id === track.id)) {
+                remoteStream.addTrack(track);
+            }
+
+            console.info(
+                `Remote ${track.kind} track received from ${peerId}`,
+                {
+                    audioTracks: remoteStream.getAudioTracks().length,
+                    videoTracks: remoteStream.getVideoTracks().length,
+                }
+            );
+            setRemoteStreams((current) => ({
+                ...current,
+                [peerId]: remoteStream,
+            }));
         };
         peer.onconnectionstatechange = () => {
             if (["failed", "closed", "disconnected"].includes(peer.connectionState)) {

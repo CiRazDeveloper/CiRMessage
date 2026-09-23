@@ -26,6 +26,7 @@ function AudioTile({ stream, label }) {
     const audioRef = useRef(null);
     const [playbackBlocked, setPlaybackBlocked] =
         useState(false);
+    const audioTrackCount = stream?.getAudioTracks().length || 0;
 
     const playAudio = useCallback(async () => {
         if (!audioRef.current) {
@@ -50,8 +51,11 @@ function AudioTile({ stream, label }) {
         }
 
         audioRef.current.srcObject = stream || null;
-        playAudio();
-    }, [playAudio, stream]);
+        if (audioTrackCount > 0) {
+            const playbackTimer = window.setTimeout(playAudio, 0);
+            return () => window.clearTimeout(playbackTimer);
+        }
+    }, [audioTrackCount, playAudio, stream]);
 
     return (
         <div className="call-audio-tile">
@@ -60,6 +64,7 @@ function AudioTile({ stream, label }) {
                 autoPlay
                 controls
                 playsInline
+                volume={1}
             />
             <span>{label}</span>
             {playbackBlocked && (
