@@ -20,7 +20,10 @@ const turnAuthentication =
         }
         : {};
 
-const ICE_SERVERS = [
+const iceTransportPolicy =
+    import.meta.env.VITE_ICE_TRANSPORT_POLICY || "all";
+
+const configuredIceServers = [
     {
         urls:
             import.meta.env.VITE_STUN_URL ||
@@ -39,6 +42,19 @@ const ICE_SERVERS = [
         ...turnAuthentication,
     },
 ];
+
+const ICE_SERVERS =
+    iceTransportPolicy === "relay"
+        ? configuredIceServers.filter((server) =>
+            Array.isArray(server.urls)
+                ? server.urls.some((url) =>
+                    url.startsWith("turn:") &&
+                    url.includes("transport=udp")
+                )
+                : server.urls.startsWith("turn:") &&
+                    server.urls.includes("transport=udp")
+        )
+        : configuredIceServers;
 
 function getId(value) {
     return value?._id?.toString() || value?.id?.toString() || value?.toString();
@@ -173,7 +189,10 @@ export function useWebRTCCall({
             return existing;
         }
 
-        const peer = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+        const peer = new RTCPeerConnection({
+            iceServers: ICE_SERVERS,
+            iceTransportPolicy,
+        });
         peersRef.current.set(peerId, peer);
         localStreamRef.current?.getTracks().forEach((track) => {
             peer.addTrack(track, localStreamRef.current);

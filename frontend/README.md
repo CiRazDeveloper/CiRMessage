@@ -30,8 +30,12 @@ VITE_TURN_URL_UDP=turn:cirm.ciraz.online:3478?transport=udp
 VITE_TURN_URL_TCP=turn:cirm.ciraz.online:3478?transport=tcp
 VITE_TURN_USERNAME=cirm
 VITE_TURN_CREDENTIAL=YOUR_CURRENT_TURN_PASSWORD
+VITE_ICE_TRANSPORT_POLICY=all
 ```
 
 Replace `YOUR_CURRENT_TURN_PASSWORD` with the password configured in Coturn
 before building the frontend. Because Vite exposes `VITE_*` values to browser
 code, use a dedicated TURN credential rather than a sensitive server secret.
+
+Set `VITE_ICE_TRANSPORT_POLICY=relay` for a TURN-only test. In relay mode,
+the frontend uses only the UDP TURN URL and excludes STUN and TURN-over-TCP.
