@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 function RemoteVideoTile({ stream, name }) {
-    const wrapperRef = useRef(null);
     const [hidden, setHidden] = useState(false);
     const [hasLiveVideo, setHasLiveVideo] = useState(false);
-    const [isFullscreen, setIsFullscreen] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(false);
 
     useEffect(() => {
         setHidden(false);
@@ -35,59 +34,34 @@ function RemoteVideoTile({ stream, name }) {
     }, [stream]);
 
     useEffect(() => {
-        const onFullscreenChange = () => {
-            setIsFullscreen(document.fullscreenElement === wrapperRef.current);
+        if (!isExpanded) return undefined;
+
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+
+        return () => {
+            document.body.style.overflow = previousOverflow;
         };
-
-        document.addEventListener("fullscreenchange", onFullscreenChange);
-        return () =>
-            document.removeEventListener("fullscreenchange", onFullscreenChange);
-    }, []);
-
-    const openFullscreen = async () => {
-        if (!wrapperRef.current?.requestFullscreen) return;
-
-        try {
-            await wrapperRef.current.requestFullscreen();
-            if (screen.orientation?.lock) {
-                try {
-                    await screen.orientation.lock("any");
-                } catch {
-                    // The browser can still follow device orientation naturally.
-                }
-            }
-        } catch (error) {
-            console.error("Could not enter screen-share fullscreen:", error);
-        }
-    };
-
-    const closeFullscreen = async () => {
-        if (document.fullscreenElement && document.exitFullscreen) {
-            await document.exitFullscreen();
-        }
-    };
+    }, [isExpanded]);
 
     if (hidden) return null;
 
     return (
         <div
-            ref={wrapperRef}
-            className={`call-video-tile call-remote-video ${hasLiveVideo ? "" : "call-video-ended"}`}
+            className={`call-video-tile call-remote-video ${hasLiveVideo ? "" : "call-video-ended"} ${isExpanded ? "call-video-expanded" : ""}`}
         >
             <MediaElement stream={stream} video />
             <span>{hasLiveVideo ? name : "Screen sharing ended"}</span>
             <div className="call-video-actions">
-                {hasLiveVideo && !isFullscreen && (
-                    <button type="button" onClick={openFullscreen}>
-                        Full screen
+                {hasLiveVideo && (
+                    <button
+                        type="button"
+                        onClick={() => setIsExpanded((expanded) => !expanded)}
+                    >
+                        {isExpanded ? "Exit full screen" : "Full screen"}
                     </button>
                 )}
-                {isFullscreen && (
-                    <button type="button" onClick={closeFullscreen}>
-                        Exit full screen
-                    </button>
-                )}
-                {!isFullscreen && (
+                {!isExpanded && (
                     <button
                         type="button"
                         aria-label="Close shared screen"
@@ -150,6 +124,7 @@ export default function CallPanel({ call, participantNames = new Map() }) {
         isCameraOff,
         isScreenSharing,
         screenStream,
+        canShareScreen,
         startCall,
         acceptCall,
         rejectCall,
@@ -255,15 +230,16 @@ export default function CallPanel({ call, participantNames = new Map() }) {
                     </button>
                 )}
 
-                {(status === "connecting" || status === "connected") && (
-                    <button
-                        type="button"
-                        className={isScreenSharing ? "call-screen-active" : ""}
-                        onClick={toggleScreenShare}
-                    >
-                        {isScreenSharing ? "Stop sharing" : "Share screen"}
-                    </button>
-                )}
+                {(status === "connecting" || status === "connected") &&
+                    (isScreenSharing || canShareScreen) && (
+                        <button
+                            type="button"
+                            className={isScreenSharing ? "call-screen-active" : ""}
+                            onClick={toggleScreenShare}
+                        >
+                            {isScreenSharing ? "Stop sharing" : "Share screen"}
+                        </button>
+                    )}
 
                 <button type="button" className="call-danger" onClick={endCall}>
                     End
