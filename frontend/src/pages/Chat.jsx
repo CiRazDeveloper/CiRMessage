@@ -729,7 +729,7 @@ function Chat() {
 
             <CallPanel
                 call={call}
-                participantNames={call.participantMap}
+                participantNames={call.participantNames}
             />
 
             <div className="chat-messages">

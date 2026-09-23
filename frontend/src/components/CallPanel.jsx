@@ -49,7 +49,7 @@ function AudioTile({ stream, label }) {
 
 function CallPanel({
     call,
-    participantNames,
+    participantNames = new Map(),
 }) {
     const {
         status,
