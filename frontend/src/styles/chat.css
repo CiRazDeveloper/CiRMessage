@@ -218,6 +218,16 @@
     width: min(260px, 100%);
 }
 
+.call-audio-tile button {
+    border: none;
+    border-radius: 6px;
+    padding: 6px 8px;
+    background: var(--private-button-hover-color);
+    color: var(--private-text-color);
+    font: inherit;
+    cursor: pointer;
+}
+
 .call-status {
     margin-right: auto;
     font-size: 13px;

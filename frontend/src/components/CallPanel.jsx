@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 function VideoTile({ stream, label, muted = false }) {
     const videoRef = useRef(null);
@@ -11,7 +11,12 @@ function VideoTile({ stream, label, muted = false }) {
 
     return (
         <div className="call-video-tile">
-            <video ref={videoRef} autoPlay playsInline muted={muted} />
+            <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted={muted}
+            />
             <span>{label}</span>
         </div>
     );
@@ -19,6 +24,25 @@ function VideoTile({ stream, label, muted = false }) {
 
 function AudioTile({ stream, label }) {
     const audioRef = useRef(null);
+    const [playbackBlocked, setPlaybackBlocked] =
+        useState(false);
+
+    const playAudio = useCallback(async () => {
+        if (!audioRef.current) {
+            return;
+        }
+
+        try {
+            await audioRef.current.play();
+            setPlaybackBlocked(false);
+        } catch (error) {
+            console.warn(
+                `Could not play remote audio for ${label}:`,
+                error
+            );
+            setPlaybackBlocked(true);
+        }
+    }, [label]);
 
     useEffect(() => {
         if (!audioRef.current) {
@@ -26,13 +50,8 @@ function AudioTile({ stream, label }) {
         }
 
         audioRef.current.srcObject = stream || null;
-        audioRef.current.play().catch((error) => {
-            console.warn(
-                `Could not autoplay audio for ${label}:`,
-                error
-            );
-        });
-    }, [label, stream]);
+        playAudio();
+    }, [playAudio, stream]);
 
     return (
         <div className="call-audio-tile">
@@ -43,6 +62,14 @@ function AudioTile({ stream, label }) {
                 playsInline
             />
             <span>{label}</span>
+            {playbackBlocked && (
+                <button
+                    type="button"
+                    onClick={playAudio}
+                >
+                    Enable audio
+                </button>
+            )}
         </div>
     );
 }
@@ -94,11 +121,16 @@ function CallPanel({
                 <div className="call-video-grid">
                     <VideoTile stream={localStream} label="You" muted />
                     {Object.entries(remoteStreams).map(([id, stream]) => (
-                        <VideoTile key={id} stream={stream} label={participantNames.get(id)?.name || "Participant"} />
+                        <VideoTile
+                            key={id}
+                            stream={stream}
+                            label={participantNames.get(id)?.name || "Participant"}
+                            muted
+                        />
                     ))}
                 </div>
             )}
-            {callType === "audio" && (
+            {Object.keys(remoteStreams).length > 0 && (
                 <div className="call-audio-list">
                     {Object.entries(remoteStreams).map(([id, stream]) => (
                         <AudioTile
