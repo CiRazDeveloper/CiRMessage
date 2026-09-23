@@ -64,6 +64,7 @@ export function useWebRTCCall({
     const peersRef = useRef(new Map());
     const pendingIceRef = useRef(new Map());
     const screenTrackRef = useRef(null);
+    const screenSendersRef = useRef(new Map());
     const initialIncomingCallRef = useRef(initialIncomingCall);
 
     useEffect(() => {
@@ -126,32 +127,29 @@ export function useWebRTCCall({
         screenTrackRef.current = null;
 
         const cameraTrack = localStreamRef.current?.getVideoTracks()[0] || null;
+
         for (const [peerId, peer] of peersRef.current.entries()) {
-            const sender = [...peer.getSenders()]
-                .reverse()
-                .find(
-                    (item) =>
-                        item.track === screenTrack ||
-                        item.track?.kind === "video"
-                );
+            const screenSender = screenSendersRef.current.get(peerId);
 
-            if (!sender) {
-                continue;
-            }
-
-            if (cameraTrack) {
-                await sender.replaceTrack(cameraTrack);
-                continue;
-            }
-
-            const transceiver = peer
-                .getTransceivers()
-                .find((item) => item.sender === sender);
-
-            if (transceiver) {
-                transceiver.direction = "recvonly";
+            if (screenSender) {
+                try {
+                    peer.removeTrack(screenSender);
+                } catch (error) {
+                    console.warn("Could not remove screen sender:", error);
+                }
+                screenSendersRef.current.delete(peerId);
             } else {
-                await sender.replaceTrack(null);
+                const videoSender = peer
+                    .getSenders()
+                    .find((sender) => sender.track === screenTrack);
+
+                if (videoSender) {
+                    await videoSender.replaceTrack(cameraTrack);
+                }
+            }
+
+            if (peer.signalingState !== "stable") {
+                continue;
             }
 
             const offer = await peer.createOffer();
@@ -170,7 +168,6 @@ export function useWebRTCCall({
 
         setScreenStream(null);
         setIsScreenSharing(false);
-        setScreenStream(null);
     }, [emitSignal]);
 
     const resetCall = useCallback(() => {
@@ -183,6 +180,7 @@ export function useWebRTCCall({
 
         peersRef.current.clear();
         pendingIceRef.current.clear();
+        screenSendersRef.current.clear();
 
         if (screenTrackRef.current) {
             screenTrackRef.current.onended = null;
@@ -496,16 +494,14 @@ export function useWebRTCCall({
         setScreenStream(displayStream);
 
         for (const [peerId, peer] of peersRef.current.entries()) {
-            const videoSender = peer
-                .getSenders()
-                .find((item) => item.track?.kind === "video");
+            // Always use a fresh sender/transceiver for each screen-share session.
+            // Reusing a stopped/recvonly transceiver is inconsistent across browsers.
+            const screenSender = peer.addTrack(screenTrack, displayStream);
+            screenSendersRef.current.set(peerId, screenSender);
 
-            if (videoSender) {
-                await videoSender.replaceTrack(screenTrack);
+            if (peer.signalingState !== "stable") {
                 continue;
             }
-
-            peer.addTrack(screenTrack, displayStream);
 
             const offer = await peer.createOffer();
             await peer.setLocalDescription(offer);
