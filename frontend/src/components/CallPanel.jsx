@@ -100,21 +100,29 @@ export default function CallPanel({ call, participantNames = new Map() }) {
                 </div>
             )}
 
-            {callType === "video" && localStream && (
+            {(callType === "video" || Object.keys(remoteStreams).length > 0) && (
                 <div className="call-video-grid">
-                    <div className="call-video-tile">
-                        <MediaElement stream={localStream} video muted />
-                        <span>You</span>
-                    </div>
-
-                    {Object.entries(remoteStreams).map(([id, stream]) => (
-                        <div className="call-video-tile" key={id}>
-                            <MediaElement stream={stream} video />
-                            <span>
-                                {participantNames.get(id)?.name || "Participant"}
-                            </span>
+                    {callType === "video" && localStream && (
+                        <div className="call-video-tile">
+                            <MediaElement stream={localStream} video muted />
+                            <span>You</span>
                         </div>
-                    ))}
+                    )}
+
+                    {Object.entries(remoteStreams).map(([id, stream]) => {
+                        const hasVideo = stream
+                            .getVideoTracks()
+                            .some((track) => track.readyState === "live");
+
+                        return hasVideo ? (
+                            <div className="call-video-tile" key={id}>
+                                <MediaElement stream={stream} video />
+                                <span>
+                                    {participantNames.get(id)?.name || "Participant"}
+                                </span>
+                            </div>
+                        ) : null;
+                    })}
                 </div>
             )}
 
