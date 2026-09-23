@@ -1,93 +1,50 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-function VideoTile({ stream, label, muted = false }) {
-    const videoRef = useRef(null);
+function MediaElement({ stream, video = false, muted = false }) {
+    const ref = useRef(null);
+    const [blocked, setBlocked] = useState(false);
 
-    useEffect(() => {
-        if (videoRef.current) {
-            videoRef.current.srcObject = stream || null;
-        }
-    }, [stream]);
-
-    return (
-        <div className="call-video-tile">
-            <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted={muted}
-            />
-            <span>{label}</span>
-        </div>
-    );
-}
-
-function AudioTile({ stream, label }) {
-    const audioRef = useRef(null);
-    const [playbackBlocked, setPlaybackBlocked] =
-        useState(false);
-    const audioTrackCount = stream?.getAudioTracks().length || 0;
-
-    const playAudio = useCallback(async () => {
-        if (!audioRef.current) {
-            return;
-        }
-
+    const play = useCallback(async () => {
+        if (!ref.current) return;
         try {
-            await audioRef.current.play();
-            setPlaybackBlocked(false);
-        } catch (error) {
-            console.warn(
-                `Could not play remote audio for ${label}:`,
-                error
-            );
-            setPlaybackBlocked(true);
+            await ref.current.play();
+            setBlocked(false);
+        } catch {
+            setBlocked(true);
         }
-    }, [label]);
+    }, []);
 
     useEffect(() => {
-        if (!audioRef.current) {
-            return;
+        if (!ref.current) return;
+        ref.current.srcObject = stream || null;
+        if (stream) {
+            play();
         }
+    }, [play, stream]);
 
-        audioRef.current.srcObject = stream || null;
-        if (audioTrackCount > 0) {
-            const playbackTimer = window.setTimeout(playAudio, 0);
-            return () => window.clearTimeout(playbackTimer);
-        }
-    }, [audioTrackCount, playAudio, stream]);
+    if (video) {
+        return <video ref={ref} autoPlay playsInline muted={muted} />;
+    }
 
     return (
-        <div className="call-audio-tile">
-            <audio
-                ref={audioRef}
-                autoPlay
-                controls
-                playsInline
-                volume={1}
-            />
-            <span>{label}</span>
-            {playbackBlocked && (
-                <button
-                    type="button"
-                    onClick={playAudio}
-                >
+        <>
+            <audio ref={ref} autoPlay playsInline />
+            {blocked && (
+                <button type="button" onClick={play}>
                     Enable audio
                 </button>
             )}
-        </div>
+        </>
     );
 }
 
-function CallPanel({
-    call,
-    participantNames = new Map(),
-}) {
+export default function CallPanel({ call, participantNames = new Map() }) {
     const {
         status,
         incomingCall,
         localStream,
         remoteStreams,
+        callType,
         isMuted,
         isCameraOff,
         isScreenSharing,
@@ -98,15 +55,17 @@ function CallPanel({
         toggleMute,
         toggleCamera,
         toggleScreenShare,
-        callType,
     } = call;
 
-    const active = status !== "idle" || incomingCall;
-    if (!active) {
+    if (status === "idle" && !incomingCall) {
         return (
             <div className="call-start-actions">
-                <button type="button" onClick={() => startCall("audio")}>📞 Audio call</button>
-                <button type="button" onClick={() => startCall("video")}>▣ Video call</button>
+                <button type="button" onClick={() => startCall("audio")}>
+                    📞 Audio call
+                </button>
+                <button type="button" onClick={() => startCall("video")}>
+                    ▣ Video call
+                </button>
             </div>
         );
     }
@@ -115,53 +74,81 @@ function CallPanel({
         <section className="call-panel" aria-label="Call controls">
             {incomingCall && (
                 <div className="call-incoming">
-                    <strong>{incomingCall.callerName} is calling ({incomingCall.callType || "video"})</strong>
+                    <strong>
+                        {incomingCall.callerName} is calling ({callType})
+                    </strong>
                     <div>
-                        <button type="button" onClick={acceptCall}>Accept</button>
-                        <button type="button" className="call-danger" onClick={rejectCall}>Reject</button>
+                        <button type="button" onClick={acceptCall}>
+                            Accept
+                        </button>
+                        <button
+                            type="button"
+                            className="call-danger"
+                            onClick={rejectCall}
+                        >
+                            Reject
+                        </button>
                     </div>
                 </div>
             )}
-            {localStream && callType === "video" && (
+
+            {callType === "video" && localStream && (
                 <div className="call-video-grid">
-                    <VideoTile stream={localStream} label="You" muted />
+                    <div className="call-video-tile">
+                        <MediaElement stream={localStream} video muted />
+                        <span>You</span>
+                    </div>
+
                     {Object.entries(remoteStreams).map(([id, stream]) => (
-                        <VideoTile
-                            key={id}
-                            stream={stream}
-                            label={participantNames.get(id)?.name || "Participant"}
-                            muted
-                        />
+                        <div className="call-video-tile" key={id}>
+                            <MediaElement stream={stream} video />
+                            <span>
+                                {participantNames.get(id)?.name || "Participant"}
+                            </span>
+                        </div>
                     ))}
                 </div>
             )}
-            {Object.keys(remoteStreams).length > 0 && (
-                <div className="call-audio-list">
-                    {Object.entries(remoteStreams).map(([id, stream]) => (
-                        <AudioTile
-                            key={id}
-                            stream={stream}
-                            label={
-                                participantNames.get(id)?.name ||
-                                "Participant"
-                            }
-                        />
-                    ))}
+
+            {Object.entries(remoteStreams).map(([id, stream]) => (
+                <div className="call-audio-tile" key={`audio-${id}`}>
+                    <MediaElement stream={stream} />
+                    <span>
+                        {participantNames.get(id)?.name || "Participant"}
+                    </span>
                 </div>
-            )}
+            ))}
+
             <div className="call-toolbar">
-                <span className="call-status">{status === "calling" ? "Calling..." : callType === "audio" ? "Audio call" : "Connected"}</span>
-                <button type="button" onClick={toggleMute}>{isMuted ? "Unmute mic" : "Mute mic"}</button>
+                <span className="call-status">
+                    {status === "calling"
+                        ? "Calling..."
+                        : status === "ringing"
+                            ? "Incoming call"
+                            : status === "connecting"
+                                ? "Connecting..."
+                                : "Connected"}
+                </span>
+
+                <button type="button" onClick={toggleMute}>
+                    {isMuted ? "Unmute mic" : "Mute mic"}
+                </button>
+
                 {callType === "video" && (
-                    <button type="button" onClick={toggleCamera}>{isCameraOff ? "Camera on" : "Camera off"}</button>
+                    <>
+                        <button type="button" onClick={toggleCamera}>
+                            {isCameraOff ? "Camera on" : "Camera off"}
+                        </button>
+                        <button type="button" onClick={toggleScreenShare}>
+                            {isScreenSharing ? "Stop sharing" : "Share screen"}
+                        </button>
+                    </>
                 )}
-                {callType === "video" && (
-                    <button type="button" onClick={toggleScreenShare}>{isScreenSharing ? "Stop sharing" : "Share screen"}</button>
-                )}
-                <button type="button" className="call-danger" onClick={endCall}>End</button>
+
+                <button type="button" className="call-danger" onClick={endCall}>
+                    End
+                </button>
             </div>
         </section>
     );
 }
-
-export default CallPanel;
