@@ -1,5 +1,6 @@
 import mod_message from "../../models/mod_message.js";
 import mod_user from "../../models/mod_user.js";
+import mod_group from "../../models/mod_group.js";
 import { STATUS_CODES } from "../../status_codes.js";
 
 export const getActiveChats = async (req, res) => {
@@ -8,8 +9,8 @@ export const getActiveChats = async (req, res) => {
 
         const messages = await mod_message.find({
             $or: [
-                { senderId: loggedInUserId },
-                { receiverId: loggedInUserId }
+                { senderId: loggedInUserId, receiverId: { $exists: true } },
+                { receiverId: loggedInUserId, senderId: { $exists: true } }
             ],
         });
 
@@ -60,17 +61,33 @@ export const getActiveChats = async (req, res) => {
         const chatsWithUnreadCount =
             activeChatUsers.map((user) => ({
                 ...user,
+                type: "direct",
                 unreadCount:
                     unreadCountMap[
                         user._id.toString()
                     ] || 0
             }));
 
+        const groups = await mod_group
+            .find({ members: loggedInUserId })
+            .populate("members", "-password")
+            .sort({ updatedAt: -1 })
+            .lean();
+
+        const groupChats = groups.map((group) => ({
+            ...group,
+            type: "group",
+            unreadCount: 0,
+        }));
+
         return res
             .status(
                 STATUS_CODES.INFO.WEB_OK
             )
-            .json(chatsWithUnreadCount);
+            .json([
+                ...chatsWithUnreadCount,
+                ...groupChats,
+            ]);
     } catch (error) {
         console.error(
             "Error in getActiveChats:",

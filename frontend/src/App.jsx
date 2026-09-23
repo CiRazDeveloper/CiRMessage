@@ -27,6 +27,7 @@ function App() {
                 <Route element={<ProtectedRoute />}>
                     <Route path="/home" element={<Home />} />
                     <Route path="/chat/:id" element={<Chat />} />
+                    <Route path="/group/:id" element={<Chat />} />
                 </Route>
 
                 {/* Default */}

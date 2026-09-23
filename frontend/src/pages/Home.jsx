@@ -43,6 +43,10 @@ function Home() {
     const [chatSearch, setChatSearch] = useState("");
     const [chats, setChats] = useState([]);
     const [unreadCounts, setUnreadCounts] = useState({});
+    const [groupModalOpen, setGroupModalOpen] = useState(false);
+    const [groupName, setGroupName] = useState("");
+    const [selectedMemberIds, setSelectedMemberIds] = useState([]);
+    const [creatingGroup, setCreatingGroup] = useState(false);
     // --- SETTINGS ---
     const [isOn, setIsOn] = useState(false);
     
@@ -95,9 +99,9 @@ function Home() {
 
             const counts = {};
 
-            response.data.forEach((user) => {
-                counts[user._id] =
-                    user.unreadCount || 0;
+            response.data.forEach((chat) => {
+                counts[chat._id] =
+                    chat.unreadCount || 0;
             });
 
             setUnreadCounts(counts);
@@ -131,14 +135,14 @@ function Home() {
 
     // OTHERS STATUS
     useEffect(() => {
-        chats.forEach((user) => {
+        chats.filter((chat) => chat.type !== "group").forEach((chat) => {
             socket.emit(
                 "get-user-status",
-                user._id,
+                chat.user?._id || chat._id,
                 (response) => {
                     setUserStatuses((previous) => ({
                         ...previous,
-                        [user._id]:
+                        [chat.user?._id || chat._id]:
                         response?.status ||
                         "Offline",
                     }));
@@ -175,14 +179,75 @@ function Home() {
         .toLowerCase();
 
     const foundChats = chatSearchValue ? chats.filter(chat =>
-            chat.username?.toLowerCase().startsWith(chatSearchValue) ||
-            chat.displayName?.toLowerCase().includes(chatSearchValue)
+            (chat.type === "group"
+                ? chat.name?.toLowerCase().includes(chatSearchValue)
+                : chat.user?.username?.toLowerCase().startsWith(chatSearchValue) ||
+                    chat.user?.displayName?.toLowerCase().includes(chatSearchValue) ||
+                    chat.username?.toLowerCase().startsWith(chatSearchValue) ||
+                    chat.displayName?.toLowerCase().includes(chatSearchValue))
     ) : chats;
 
-    function handleClickToChat(user) {
-        navigate(`/chat/${user._id}`, {
-            state: { user }
+    function handleClickToChat(chat) {
+        const user = chat.type === "group" ? null : (chat.user || chat);
+
+        navigate(`${chat.type === "group" ? "/group" : "/chat"}/${chat._id}`, {
+            state: { user, group: chat.type === "group" ? chat : null }
         });
+    }
+
+    async function openGroupModal() {
+        setGroupModalOpen(true);
+        setGroupName("");
+        setSelectedMemberIds([]);
+        await loadContacts();
+    }
+
+    function toggleGroupMember(userId) {
+        setSelectedMemberIds((previous) =>
+            previous.includes(userId)
+                ? previous.filter((id) => id !== userId)
+                : [...previous, userId]
+        );
+    }
+
+    async function createGroup(event) {
+        event.preventDefault();
+
+        if (!groupName.trim() || selectedMemberIds.length === 0) {
+            showNotification(
+                "Enter a group name and select at least one member",
+                "info"
+            );
+            return;
+        }
+
+        setCreatingGroup(true);
+
+        try {
+            const response = await axiosInstance.post(
+                "/groups",
+                {
+                    name: groupName.trim(),
+                    memberIds: selectedMemberIds,
+                }
+            );
+
+            setGroupModalOpen(false);
+            await loadChats();
+            handleClickToChat({
+                ...response.data,
+                type: "group",
+            });
+        } catch (error) {
+            console.error("Could not create group:", error);
+            showNotification(
+                error.response?.data?.message ||
+                    "Could not create group",
+                "error"
+            );
+        } finally {
+            setCreatingGroup(false);
+        }
     }
 
     // UNREAD MESSAGES
@@ -206,17 +271,21 @@ function Home() {
                 return;
             }
 
-            const existingChat = chats.some(
-                (chat) =>
-                    chat._id.toString() ===
-                    senderId
+            const existingChat = chats.find((chat) =>
+                chat.type === "group"
+                    ? chat.members?.some(
+                        (member) =>
+                            member._id?.toString() === senderId ||
+                            member.toString?.() === senderId
+                    )
+                    : (chat.user?._id || chat._id).toString() === senderId
             );
 
             if (existingChat) {
                 setUnreadCounts((previous) => ({
                     ...previous,
-                    [senderId]:
-                        (previous[senderId] || 0) + 1,
+                    [existingChat._id]:
+                        (previous[existingChat._id] || 0) + 1,
                 }));
 
                 return;
@@ -623,7 +692,16 @@ function Home() {
             {/* CHATS */}
             {activePage === "chats" && (
                 <section className="chats-page">
-                    <h1>Chats</h1>
+                    <div className="page-heading">
+                        <h1>Chats</h1>
+                        <button
+                            type="button"
+                            className="create-group-button"
+                            onClick={openGroupModal}
+                        >
+                            New group
+                        </button>
+                    </div>
 
                     <TextInput
                         type="text"
@@ -633,16 +711,20 @@ function Home() {
                     />
 
                     <div className="chats-results">
-                        {foundChats.map(user => (
+                        {foundChats.map(chat => {
+                            const isGroup = chat.type === "group";
+                            const user = chat.user || chat;
+
+                            return (
                             <div
                                 className="chats-user-card"
-                                key={user._id}
+                                key={chat._id}
                                 onClick={() =>
-                                    handleClickToChat(user)
+                                    handleClickToChat(chat)
                                 }
                             >
                                 <div className="chats-user-avatar-wrapper">
-                                    {user.profilePicture ? (
+                                    {!isGroup && user.profilePicture ? (
                                         <img
                                             className="chats-user-avatar"
                                             src={user.profilePicture}
@@ -650,40 +732,45 @@ function Home() {
                                         />
                                     ) : (
                                         <div className="chats-user-avatar chats-user-avatar-fallback">
-                                            {user.displayName
+                                            {(isGroup ? chat.name : user.displayName)
                                                 ?.charAt(0)
                                                 .toUpperCase() || "?"}
                                         </div>
                                     )}
 
-                                    <StatusDot
-                                        status={
-                                            userStatuses[user._id] ||
-                                            "Offline"
-                                        }
-                                        className="chats-user-list-status-dot"
-                                    />
+                                    {!isGroup && (
+                                        <StatusDot
+                                            status={
+                                                userStatuses[user._id] ||
+                                                "Offline"
+                                            }
+                                            className="chats-user-list-status-dot"
+                                        />
+                                    )}
                                 </div>
 
                                 <div className="chats-user-info">
                                     <span className="chats-user-display-name">
-                                        {user.displayName}
+                                        {isGroup ? chat.name : user.displayName}
                                     </span>
 
                                     <span className="chats-user-username">
-                                        @{user.username}
+                                        {isGroup
+                                            ? `${chat.members?.length || 0} members`
+                                            : `@${user.username}`}
                                     </span>
                                 </div>
 
-                                {(unreadCounts[user._id] || 0) > 0 && (
+                                {(unreadCounts[chat._id] || 0) > 0 && (
                                     <span className="unread-badge">
                                         {formatUnreadCount(
-                                            unreadCounts[user._id]
+                                            unreadCounts[chat._id]
                                         )}
                                     </span>
                                 )}
                             </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </section>
             )}
@@ -754,6 +841,57 @@ function Home() {
                         </div>
                     </div>
                 </section>
+            )}
+
+            {groupModalOpen && (
+                <div className="group-modal-backdrop">
+                    <form className="group-modal" onSubmit={createGroup}>
+                        <h2>Create group</h2>
+
+                        <TextInput
+                            type="text"
+                            placeholder="Group name"
+                            value={groupName}
+                            onChange={(event) =>
+                                setGroupName(event.target.value)
+                            }
+                        />
+
+                        <div className="group-member-list">
+                            {contacts.map((contact) => (
+                                <label
+                                    className="group-member-option"
+                                    key={contact._id}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedMemberIds.includes(
+                                            contact._id
+                                        )}
+                                        onChange={() =>
+                                            toggleGroupMember(contact._id)
+                                        }
+                                    />
+                                    <span>
+                                        {contact.displayName} @{contact.username}
+                                    </span>
+                                </label>
+                            ))}
+                        </div>
+
+                        <div className="group-modal-actions">
+                            <button
+                                type="button"
+                                onClick={() => setGroupModalOpen(false)}
+                            >
+                                Cancel
+                            </button>
+                            <button type="submit" disabled={creatingGroup}>
+                                {creatingGroup ? "Creating..." : "Create group"}
+                            </button>
+                        </div>
+                    </form>
+                </div>
             )}
         </div>
 

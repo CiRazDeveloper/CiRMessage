@@ -4,6 +4,7 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 
 import minioClient from "../../lib/minio.js";
 import mod_user from "../../models/mod_user.js";
+import mod_group from "../../models/mod_group.js";
 import { STATUS_CODES } from "../../status_codes.js";
 import { extensionMap } from "../../middlewares/mid_upload.js";
 
@@ -18,6 +19,7 @@ export const postMessageMedia = async ({
     file,
     senderId,
     receiverId,
+    groupId,
 }) => {
     if (!file) {
         return undefined;
@@ -36,11 +38,7 @@ export const postMessageMedia = async ({
         .findById(senderId)
         .select("username");
 
-    const receiver = await mod_user
-        .findById(receiverId)
-        .select("username");
-
-    if (!sender || !receiver) {
+    if (!sender) {
         throw new MediaUploadError(
             "User not found",
             STATUS_CODES.ERROR.WEB_NOT_FOUND
@@ -52,16 +50,48 @@ export const postMessageMedia = async ({
         "_"
     );
 
-    const safeReceiverUsername =
-        receiver.username.replace(
-            /[^a-zA-Z0-9_-]/g,
-            "_"
-        );
+    let mediaKey;
 
-    const mediaKey =
-        `users/${safeUsername}/messages/` +
-        `${safeReceiverUsername}/` +
-        `${crypto.randomUUID()}.${extension}`;
+    if (groupId) {
+        const group = await mod_group.findOne({
+            _id: groupId,
+            members: senderId,
+        }).select("_id");
+
+        if (!group) {
+            throw new MediaUploadError(
+                "Group not found or access denied",
+                STATUS_CODES.ERROR.WEB_FORBIDDEN
+            );
+        }
+
+        mediaKey =
+            `groups/${group._id}/messages/` +
+            `${safeUsername}/` +
+            `${crypto.randomUUID()}.${extension}`;
+    } else {
+        const receiver = await mod_user
+            .findById(receiverId)
+            .select("username");
+
+        if (!receiver) {
+            throw new MediaUploadError(
+                "User not found",
+                STATUS_CODES.ERROR.WEB_NOT_FOUND
+            );
+        }
+
+        const safeReceiverUsername =
+            receiver.username.replace(
+                /[^a-zA-Z0-9_-]/g,
+                "_"
+            );
+
+        mediaKey =
+            `users/${safeUsername}/messages/` +
+            `${safeReceiverUsername}/` +
+            `${crypto.randomUUID()}.${extension}`;
+    }
 
     await minioClient.send(
         new PutObjectCommand({

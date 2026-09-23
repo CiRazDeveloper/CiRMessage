@@ -7,7 +7,10 @@ import upload, {
 import { getAllContacts } from "../controllers/message/get_contacts_controller.js";
 import { getActiveChats } from "../controllers/message/get_active_chats_controller.js";
 import { getMessagesByUserId } from "../controllers/message/get_messages_by_id_controller.js";
-import { sendMessage } from "../controllers/message/post_message_controller.js";
+import {
+    sendMessage,
+    sendGroupMessage,
+} from "../controllers/message/post_message_controller.js";
 
 const router = express.Router();
 
@@ -22,6 +25,13 @@ router.post(
     upload.single("media"),
     handleUploadError,
     sendMessage
+);
+
+router.post(
+    "/groups/:id",
+    upload.single("media"),
+    handleUploadError,
+    sendGroupMessage
 );
 
 export default router;

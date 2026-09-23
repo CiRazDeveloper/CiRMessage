@@ -1,6 +1,7 @@
 import "dotenv/config";
 
 import mod_message from "../../models/mod_message.js";
+import mod_group from "../../models/mod_group.js";
 import { STATUS_CODES } from "../../status_codes.js";
 import { getIO } from "../../lib/socket.js";
 import {
@@ -77,12 +78,14 @@ const enforceMessageRequest = async (
 const createMessage = async ({
     senderId,
     receiverId,
+    groupId,
     text,
     media,
 }) => {
     return mod_message.create({
         senderId,
         receiverId,
+        groupId,
         text: text?.trim() || undefined,
         media: media?.mediaKey,
         mediaType: media?.mediaType,
@@ -94,6 +97,22 @@ const emitNewMessage = (receiverId, message) => {
     getIO()
         .to(`user:${receiverId}`)
         .emit("new-message", message);
+};
+
+const emitNewGroupMessage = async (groupId, message) => {
+    const group = await mod_group
+        .findById(groupId)
+        .select("members");
+
+    if (!group) {
+        return;
+    }
+
+    group.members.forEach((memberId) => {
+        getIO()
+            .to(`user:${memberId.toString()}`)
+            .emit("new-message", message);
+    });
 };
 
 export const sendMessage = async (req, res) => {
@@ -180,5 +199,75 @@ export const sendMessage = async (req, res) => {
                 message:
                     "Internal Server Error",
             });
+    }
+};
+
+export const sendGroupMessage = async (req, res) => {
+    try {
+        const { text } = req.body;
+        const { id: groupId } = req.params;
+        const senderId = req.user._id;
+        const textError = validateText(text);
+
+        if (textError) {
+            return res.status(STATUS_CODES.ERROR.WEB_BAD_REQUEST)
+                .json({ message: textError });
+        }
+
+        const group = await mod_group.findOne({
+            _id: groupId,
+            members: senderId,
+        }).select("_id");
+
+        if (!group) {
+            return res.status(STATUS_CODES.ERROR.WEB_FORBIDDEN)
+                .json({ message: "Group not found or access denied" });
+        }
+
+        const media = await postMessageMedia({
+            file: req.file,
+            senderId,
+            groupId,
+        });
+
+        if (!text?.trim() && !media) {
+            return res.status(STATUS_CODES.ERROR.WEB_BAD_REQUEST)
+                .json({ message: "Text or media is required" });
+        }
+
+        const message = await createMessage({
+            senderId,
+            groupId,
+            text,
+            media,
+        });
+
+        await message.populate(
+            "senderId",
+            "displayName username"
+        );
+
+        const responseMessage = {
+            ...message.toObject(),
+            sender: message.senderId,
+            senderId: message.senderId._id,
+        };
+
+        await emitNewGroupMessage(groupId, responseMessage);
+
+        return res.status(STATUS_CODES.INFO.WEB_CREATED)
+            .json(responseMessage);
+    } catch (error) {
+        console.error("Error in sendGroupMessage:", error);
+
+        if (error instanceof MediaUploadError || error.statusCode) {
+            return res.status(error.statusCode).json({
+                ...(error.code && { code: error.code }),
+                message: error.message,
+            });
+        }
+
+        return res.status(STATUS_CODES.ERROR.SERVER_INTERNAL_ERROR)
+            .json({ message: "Internal Server Error" });
     }
 };

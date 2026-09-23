@@ -13,6 +13,7 @@ import routesAuth from "./routes/auth.js";
 import profileRoutes from "./routes/profile.js";
 import mediaRoutes from "./routes/media.js";
 import routesMessages from "./routes/messages.js";
+import routesGroups from "./routes/groups.js";
 
 // --- CONFIGURATIONS ---
 dotenv.config();
@@ -57,6 +58,7 @@ app.use("/api/auth", routesAuth);
 app.use("/api/profile", profileRoutes);
 app.use("/api/media", mediaRoutes);
 app.use("/api/messages", routesMessages);
+app.use("/api/groups", routesGroups);
 
 // --- MAKE READY FOR DEPLOYMENT ---
 if (process.env.NODE_ENV === "production") {

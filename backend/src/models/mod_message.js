@@ -11,7 +11,11 @@ const messageSchema = new mongoose.Schema(
         receiverId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
-            required: true,
+        },
+
+        groupId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Group",
         },
 
         text: {
@@ -45,6 +49,20 @@ const messageSchema = new mongoose.Schema(
         timestamps: true,
     }
 );
+
+messageSchema.pre("validate", function (next) {
+    const hasReceiver = Boolean(this.receiverId);
+    const hasGroup = Boolean(this.groupId);
+
+    if (hasReceiver === hasGroup) {
+        this.invalidate(
+            "receiverId",
+            "Exactly one of receiverId or groupId is required"
+        );
+    }
+
+    next();
+});
 
 const mod_message = mongoose.model(
     "Message",

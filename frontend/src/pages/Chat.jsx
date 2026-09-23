@@ -23,6 +23,10 @@ function Chat() {
     const { id } = useParams();
 
     const user = location.state?.user;
+    const [loadedGroup, setLoadedGroup] = useState(null);
+    const group = location.state?.group || loadedGroup;
+    const isGroup = Boolean(location.state?.group) ||
+        location.pathname.startsWith("/group/");
     
     const [profilePictureUrl, setProfilePictureUrl] = useState(null);
     const [chatPartnerStatus, setChatPartnerStatus] = useState("Offline");
@@ -40,12 +44,41 @@ function Chat() {
         });
     }, []);
 
+    useEffect(() => {
+        if (!isGroup || group) {
+            return;
+        }
+
+        async function loadGroup() {
+            try {
+                const response = await axiosInstance.get(
+                    `/groups/${id}`
+                );
+                setLoadedGroup(response.data);
+            } catch (error) {
+                console.error("Could not load group:", error);
+                showNotification(
+                    error.response?.data?.message ||
+                        "Could not load group",
+                    "error"
+                );
+            }
+        }
+
+        loadGroup();
+    }, [id, isGroup, group, showNotification]);
+
 
     // --- PROFILE PICTURE ---
     useEffect(() => {
         let profileUrl;
 
         async function loadProfilePicture() {
+            if (isGroup) {
+                setProfilePictureUrl(null);
+                return;
+            }
+
             try {
                 const response = await axiosInstance.get(
                     `/profile/get/${id}`,
@@ -90,11 +123,11 @@ function Chat() {
                 URL.revokeObjectURL(profileUrl);
             }
         };
-    }, [id, showNotification]);
+    }, [id, isGroup, showNotification]);
 
     // --- STATUS ---
     useEffect(() => {
-        if (!id) {
+        if (!id || isGroup) {
             return;
         }
 
@@ -143,7 +176,7 @@ function Chat() {
                 handleStatusChanged
             );
         };
-    }, [id]);
+    }, [id, isGroup]);
 
     // --- MESSAGES AND IMAGES ---
 
@@ -152,16 +185,17 @@ function Chat() {
         const mediaUrls = [];
 
         async function handleNewMessage(message) {
-            if (
-                message.senderId.toString() !== id
-            ) {
+            const belongsToChat = isGroup
+                ? message.groupId?.toString() === id
+                : message.senderId?.toString() === id;
+
+            if (!belongsToChat || message.isMine) {
                 return;
             }
 
-            socket.emit(
-                "message-read",
-                message.senderId
-            );
+            if (!isGroup) {
+                socket.emit("message-read", message.senderId);
+            }
 
             let receivedMessage = {
                 ...message,
@@ -232,7 +266,7 @@ function Chat() {
                 URL.revokeObjectURL(url);
             });
         };
-    }, [id]);
+    }, [id, isGroup]);
 
     // LOAD
     useEffect(() => {
@@ -240,10 +274,11 @@ function Chat() {
 
         async function loadMessages() {
             try {
-                const response =
-                    await axiosInstance.get(
-                        `/messages/${id}`
-                    );
+                const response = await axiosInstance.get(
+                    isGroup
+                        ? `/groups/${id}/messages`
+                        : `/messages/${id}`
+                );
 
                 const loadedMessages =
                     await Promise.all(
@@ -290,10 +325,9 @@ function Chat() {
 
                 setMessages(loadedMessages);
 
-                socket.emit(
-                    "message-read",
-                    id
-                );
+                if (!isGroup) {
+                    socket.emit("message-read", id);
+                }
             } catch (error) {
                 console.error(
                     "Could not load messages:",
@@ -314,7 +348,7 @@ function Chat() {
                 URL.revokeObjectURL(url);
             });
         };
-    }, [id, showNotification]);
+    }, [id, isGroup, showNotification]);
 
     // SCROLL TO THE BOTTOM
     useEffect(() => {
@@ -358,11 +392,12 @@ function Chat() {
                 );
             }
 
-            const response =
-                await axiosInstance.post(
-                    `/messages/send/${id}`,
-                    formData
-                );
+            const response = await axiosInstance.post(
+                isGroup
+                    ? `/messages/groups/${id}`
+                    : `/messages/send/${id}`,
+                formData
+            );
 
             const newMessage = response.data;
 
@@ -527,6 +562,10 @@ function Chat() {
 
     // CHECK FOR FIRST CONVO
     const conversationRequestState = (() => {
+        if (isGroup) {
+            return null;
+        }
+
         if (messages.length === 0) {
             return null;
         }
@@ -614,25 +653,31 @@ function Chat() {
                             />
                         ) : (
                             <div className="chat-header-avatar chat-header-avatar-fallback">
-                                {user?.displayName
+                                {(isGroup ? group?.name : user?.displayName)
                                     ?.charAt(0)
                                     .toUpperCase() || "?"}
                             </div>
                         )}
 
-                        <StatusDot
-                            status={chatPartnerStatus}
-                            className="chat-header-status-dot"
-                        />
+                        {!isGroup && (
+                            <StatusDot
+                                status={chatPartnerStatus}
+                                className="chat-header-status-dot"
+                            />
+                        )}
                     </div>
 
                     <div className="chat-header-info">
                         <strong>
-                            {user?.displayName || "Chat"}
+                            {isGroup
+                                ? group?.name || "Group"
+                                : user?.displayName || "Chat"}
                         </strong>
 
                         <span>
-                            @{user?.username}
+                            {isGroup
+                                ? `${group?.members?.length || 0} members`
+                                : `@${user?.username}`}
                         </span>
                     </div>
                 </div>
@@ -696,6 +741,14 @@ function Chat() {
                                                 : "message message-received"
                                         }
                                     >
+                                        {isGroup && !message.isMine && (
+                                            <span className="message-sender-name">
+                                                {message.sender?.displayName ||
+                                                    message.senderName ||
+                                                    "Member"}
+                                            </span>
+                                        )}
+
                                         {message.text && (
                                             <p>{message.text}</p>
                                         )}

@@ -7,6 +7,7 @@ import {
 import minioClient from "../../lib/minio.js";
 import mod_user from "../../models/mod_user.js";
 import mod_message from "../../models/mod_message.js";
+import mod_group from "../../models/mod_group.js";
 import { STATUS_CODES } from "../../status_codes.js";
 
 const streamObject = async (
@@ -270,12 +271,18 @@ export const getMessageMedia = async (req, res) => {
         const userId = req.user._id.toString();
 
         // If the logged-in user is neither the sender nor the receiver, deny access
-        if (
-            message.senderId.toString() !==
-                userId &&
-            message.receiverId.toString() !==
-                userId
-        ) {
+        let authorized =
+            message.senderId.toString() === userId ||
+            message.receiverId?.toString() === userId;
+
+        if (message.groupId) {
+            authorized = Boolean(await mod_group.exists({
+                _id: message.groupId,
+                members: req.user._id,
+            }));
+        }
+
+        if (!authorized) {
             return res
                 .status(
                     STATUS_CODES.ERROR.WEB_FORBIDDEN
