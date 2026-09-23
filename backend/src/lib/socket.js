@@ -182,7 +182,7 @@ export const initializeSocket = (server) => {
                                 },
                             },
                             {
-                                new: true,
+                                returnDocument: "after",
                             }
                         );
 
