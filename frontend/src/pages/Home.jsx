@@ -85,6 +85,16 @@ function Home() {
         contact.username?.toLowerCase().startsWith(searchValue)
     ) : [];
 
+    const directChatUserIds = new Set(
+        chats
+            .filter((chat) => chat.type !== "group")
+            .map((chat) => (chat.user?._id || chat._id).toString())
+    );
+
+    const groupContacts = contacts.filter((contact) =>
+        directChatUserIds.has(contact._id.toString())
+    );
+
 
     // --- CHATS ---
     // LOAD
@@ -199,7 +209,10 @@ function Home() {
         setGroupModalOpen(true);
         setGroupName("");
         setSelectedMemberIds([]);
-        await loadContacts();
+        await Promise.all([
+            loadChats(),
+            loadContacts(),
+        ]);
     }
 
     function toggleGroupMember(userId) {
@@ -858,7 +871,7 @@ function Home() {
                         />
 
                         <div className="group-member-list">
-                            {contacts.map((contact) => (
+                            {groupContacts.map((contact) => (
                                 <label
                                     className="group-member-option"
                                     key={contact._id}
@@ -877,6 +890,13 @@ function Home() {
                                     </span>
                                 </label>
                             ))}
+
+                            {groupContacts.length === 0 && (
+                                <span>
+                                    Only users from your existing chats can
+                                    be added to a group.
+                                </span>
+                            )}
                         </div>
 
                         <div className="group-modal-actions">

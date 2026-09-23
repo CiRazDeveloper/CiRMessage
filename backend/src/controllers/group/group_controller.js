@@ -61,6 +61,54 @@ export const createGroup = async (req, res) => {
                 .json({ message: "One or more users were not found" });
         }
 
+        const requestedOtherMemberIds = memberIds.filter(
+            (memberId) =>
+                memberId !== req.user._id.toString()
+        );
+
+        const directChatMessages = await mod_message.find(
+            {
+                $or: [
+                    {
+                        senderId: req.user._id,
+                        receiverId: {
+                            $in: requestedOtherMemberIds,
+                        },
+                    },
+                    {
+                        receiverId: req.user._id,
+                        senderId: {
+                            $in: requestedOtherMemberIds,
+                        },
+                    },
+                ],
+            }
+        ).select("senderId receiverId");
+
+        const directChatMemberIds = directChatMessages.flatMap(
+            (message) => [
+                message.senderId.toString(),
+                message.receiverId.toString(),
+            ]
+        );
+
+        const directChatMemberIdSet = new Set(
+            directChatMemberIds
+        );
+
+        const hasOnlyExistingChatMembers =
+            requestedOtherMemberIds.every((memberId) =>
+                directChatMemberIdSet.has(memberId)
+            );
+
+        if (!hasOnlyExistingChatMembers) {
+            return res.status(STATUS_CODES.ERROR.WEB_FORBIDDEN)
+                .json({
+                    message:
+                        "Groups can only include users from your existing chats",
+                });
+        }
+
         const group = await mod_group.create({
             name: trimmedName,
             members: memberIds,
