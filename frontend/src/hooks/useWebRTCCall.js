@@ -284,12 +284,48 @@ export function useWebRTCCall({
             };
 
             peer.ontrack = ({ track, streams }) => {
-                const stream = streams[0] || new MediaStream([track]);
+                setRemoteStreams((current) => {
+                    const existingStream = current[peerId];
+                    const incomingStream = streams[0];
 
-                setRemoteStreams((current) => ({
-                    ...current,
-                    [peerId]: stream,
-                }));
+                    if (!existingStream) {
+                        return {
+                            ...current,
+                            [peerId]:
+                                incomingStream || new MediaStream([track]),
+                        };
+                    }
+
+                    if (
+                        !existingStream
+                            .getTracks()
+                            .some((item) => item.id === track.id)
+                    ) {
+                        existingStream.addTrack(track);
+                    }
+
+                    return {
+                        ...current,
+                        [peerId]: existingStream,
+                    };
+                });
+
+                const refreshRemoteStream = () => {
+                    setRemoteStreams((current) => {
+                        const currentStream = current[peerId];
+                        if (!currentStream) {
+                            return current;
+                        }
+
+                        return {
+                            ...current,
+                            [peerId]: currentStream,
+                        };
+                    });
+                };
+
+                track.addEventListener("unmute", refreshRemoteStream);
+                track.addEventListener("ended", refreshRemoteStream);
             };
 
             peer.onconnectionstatechange = () => {
