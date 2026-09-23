@@ -93,7 +93,9 @@ export function useWebRTCCall({
     const [isCameraOff, setIsCameraOff] = useState(false);
     const [isScreenSharing, setIsScreenSharing] = useState(false);
     const [callType, setCallType] = useState("video");
+    const currentUserId = getId(currentUser);
     const peersRef = useRef(new Map());
+    const peerGenerationRef = useRef(0);
     const localStreamRef = useRef(null);
     const screenTrackRef = useRef(null);
     const callIdRef = useRef(null);
@@ -181,7 +183,7 @@ export function useWebRTCCall({
     }, []);
 
     const createPeer = useCallback((peerId, shouldOffer, callId) => {
-        if (!peerId || peerId === getId(currentUser)) {
+        if (!peerId || peerId === currentUserId) {
             return null;
         }
         const existing = peersRef.current.get(peerId);
@@ -189,28 +191,26 @@ export function useWebRTCCall({
             return existing;
         }
 
+        const generation = ++peerGenerationRef.current;
         const peer = new RTCPeerConnection({
             iceServers: ICE_SERVERS,
             iceTransportPolicy,
         });
+        console.log(`CREATE PEER #${generation}`, { peerId, callId, shouldOffer, signalingState: peer.signalingState, iceGatheringState: peer.iceGatheringState, connectionState: peer.connectionState });
         peersRef.current.set(peerId, peer);
         localStreamRef.current?.getTracks().forEach((track) => {
             peer.addTrack(track, localStreamRef.current);
         });
         peer.onicecandidate = ({ candidate }) => {
             if (candidate) {
-                console.log(
-                    `LOCAL ICE for ${peerId}:`,
-                    candidate.candidate
-                );
+                console.log(`PC #${generation} LOCAL ICE for ${peerId}:`, candidate.candidate);
+                console.log(`PC #${generation} EMITTING ICE`, { peerId, callId, socketConnected: socket.connected, candidate: candidate.candidate });
                 emitCall("call-ice-candidate", {
                     callId,
                     candidate: candidate.toJSON ? candidate.toJSON() : candidate,
                 }, peerId);
             } else {
-                console.log(
-                    `ICE gathering finished for ${peerId}`
-                );
+                console.log(`PC #${generation} ICE gathering finished for ${peerId}`);
             }
         };
         peer.ontrack = ({ track, streams }) => {
@@ -238,28 +238,16 @@ export function useWebRTCCall({
             }));
         };
         peer.onconnectionstatechange = () => {
-            console.log(
-                "Connection state:",
-                peer.connectionState,
-                `(${peerId})`
-            );
-            if (["failed", "closed", "disconnected"].includes(peer.connectionState)) {
+            console.log(`PC #${generation} Connection state:`, peer.connectionState, `(${peerId})`);
+            if (["failed", "closed"].includes(peer.connectionState)) {
                 closePeer(peerId);
             }
         };
         peer.oniceconnectionstatechange = () => {
-            console.log(
-                "ICE connection state:",
-                peer.iceConnectionState,
-                `(${peerId})`
-            );
+            console.log(`PC #${generation} ICE connection state:`, peer.iceConnectionState, `(${peerId})`);
         };
         peer.onicegatheringstatechange = () => {
-            console.log(
-                "ICE gathering state:",
-                peer.iceGatheringState,
-                `(${peerId})`
-            );
+            console.log(`PC #${generation} ICE gathering state:`, peer.iceGatheringState, `(${peerId})`);
         };
         peer.onicecandidateerror = (event) => {
             console.error("ICE candidate error:", {
@@ -267,13 +255,16 @@ export function useWebRTCCall({
                 errorCode: event.errorCode,
                 errorText: event.errorText,
                 peerId,
+                generation,
             });
         };
         if (shouldOffer) {
             (async () => {
                 try {
                     const offer = await peer.createOffer();
+                    console.log(`PC #${generation} BEFORE setLocalDescription(offer)`, { signalingState: peer.signalingState, iceGatheringState: peer.iceGatheringState, connectionState: peer.connectionState });
                     await peer.setLocalDescription(offer);
+                    console.log(`PC #${generation} AFTER setLocalDescription(offer)`, { signalingState: peer.signalingState, iceGatheringState: peer.iceGatheringState, connectionState: peer.connectionState, localDescriptionType: peer.localDescription?.type });
 
                     emitCall("call-offer", {
                         callId,
@@ -289,7 +280,7 @@ export function useWebRTCCall({
             })();
         }
         return peer;
-    }, [closePeer, currentUser, emitCall]);
+    }, [closePeer, currentUserId, emitCall]);
 
     const flushPendingIceCandidates = useCallback(
         async (peerId, peer) => {
@@ -327,7 +318,7 @@ export function useWebRTCCall({
             callTypeRef.current = requestedType;
             setCallType(requestedType);
             await ensureLocalStream(requestedType);
-            callIdRef.current = `${getId(currentUser)}-${requestedType}-${Date.now()}`;
+            callIdRef.current = `${currentUserId}-${requestedType}-${Date.now()}`;
             setStatus("calling");
             emitCall("call-invite", {
                 callId: callIdRef.current,
@@ -338,7 +329,7 @@ export function useWebRTCCall({
             setStatus("idle");
             throw error;
         }
-    }, [currentUser, emitCall, ensureLocalStream]);
+    }, [currentUserId, emitCall, ensureLocalStream]);
 
     const acceptCall = useCallback(async () => {
         if (!incomingCall) {
@@ -456,17 +447,21 @@ export function useWebRTCCall({
         if (!enabled) {
             return undefined;
         }
-        const userId = getId(currentUser);
-        const matchesCall = (payload) =>
-            payload?.callId === callIdRef.current ||
-            payload?.groupId === targetId ||
-            payload?.targetUserId === targetId ||
-            payload?.callerId === targetId ||
-            payload?.targetUserId === userId ||
-            payload?.targetPeerId === userId;
+        const userId = currentUserId;
+        const matchesCall = (payload, allowNewCall = false) => {
+            if (callIdRef.current) {
+                return payload?.callId === callIdRef.current;
+            }
+            if (!allowNewCall) {
+                return false;
+            }
+            return isGroup
+                ? payload?.groupId === targetId
+                : payload?.callerId === targetId && payload?.targetUserId === userId;
+        };
 
         function handleInvite(payload) {
-            if (!matchesCall(payload) || payload.callerId === userId) {
+            if (!matchesCall(payload, true) || payload.callerId === userId) {
                 return;
             }
             const caller = participantMap.current.get(payload.callerId);
@@ -496,7 +491,9 @@ export function useWebRTCCall({
             if (!peer || !description) {
                 return;
             }
+            console.log("BEFORE setRemoteDescription(offer)", { peerId, signalingState: peer.signalingState, iceGatheringState: peer.iceGatheringState, connectionState: peer.connectionState });
             await peer.setRemoteDescription(description);
+            console.log("AFTER setRemoteDescription(offer)", { peerId, signalingState: peer.signalingState, iceGatheringState: peer.iceGatheringState, connectionState: peer.connectionState });
             console.log(
                 "REMOTE SDP ICE CANDIDATES:",
                 peer.remoteDescription?.sdp
@@ -504,8 +501,11 @@ export function useWebRTCCall({
                     .filter((line) => line.startsWith("a=candidate:"))
             );
             await flushPendingIceCandidates(peerId, peer);
+            console.log("BEFORE createAnswer", { peerId, signalingState: peer.signalingState, iceGatheringState: peer.iceGatheringState, connectionState: peer.connectionState });
             const answer = await peer.createAnswer();
+            console.log("BEFORE setLocalDescription(answer)", { peerId, signalingState: peer.signalingState, iceGatheringState: peer.iceGatheringState, connectionState: peer.connectionState });
             await peer.setLocalDescription(answer);
+            console.log("AFTER setLocalDescription(answer)", { peerId, signalingState: peer.signalingState, iceGatheringState: peer.iceGatheringState, connectionState: peer.connectionState, localDescriptionType: peer.localDescription?.type });
             emitCall("call-answer", {
                 callId: payload.callId,
                 sdp: peer.localDescription.sdp,
@@ -652,7 +652,7 @@ export function useWebRTCCall({
         };
     }, [
         createPeer,
-        currentUser,
+        currentUserId,
         emitCall,
         enabled,
         endCall,
