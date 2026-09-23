@@ -78,40 +78,6 @@ function descriptionFromSdp(payload) {
     };
 }
 
-function waitForIceGatheringComplete(peer, timeout = 10000) {
-    if (peer.iceGatheringState === "complete") {
-        return Promise.resolve();
-    }
-
-    return new Promise((resolve) => {
-        let settled = false;
-        const finish = () => {
-            if (settled) {
-                return;
-            }
-
-            settled = true;
-            window.clearTimeout(timeoutId);
-            peer.removeEventListener(
-                "icegatheringstatechange",
-                handleStateChange
-            );
-            resolve();
-        };
-        const handleStateChange = () => {
-            if (peer.iceGatheringState === "complete") {
-                finish();
-            }
-        };
-        const timeoutId = window.setTimeout(finish, timeout);
-
-        peer.addEventListener(
-            "icegatheringstatechange",
-            handleStateChange
-        );
-    });
-}
-
 export function useWebRTCCall({
     targetId,
     isGroup = false,
@@ -308,7 +274,6 @@ export function useWebRTCCall({
                 try {
                     const offer = await peer.createOffer();
                     await peer.setLocalDescription(offer);
-                    await waitForIceGatheringComplete(peer);
 
                     emitCall("call-offer", {
                         callId,
@@ -532,10 +497,15 @@ export function useWebRTCCall({
                 return;
             }
             await peer.setRemoteDescription(description);
+            console.log(
+                "REMOTE SDP ICE CANDIDATES:",
+                peer.remoteDescription?.sdp
+                    ?.split("\r\n")
+                    .filter((line) => line.startsWith("a=candidate:"))
+            );
             await flushPendingIceCandidates(peerId, peer);
             const answer = await peer.createAnswer();
             await peer.setLocalDescription(answer);
-            await waitForIceGatheringComplete(peer);
             emitCall("call-answer", {
                 callId: payload.callId,
                 sdp: peer.localDescription.sdp,
@@ -552,13 +522,41 @@ export function useWebRTCCall({
             const description = descriptionFromSdp(payload);
             if (peer && description) {
                 await peer.setRemoteDescription(description);
+                console.log(
+                    "REMOTE SDP ICE CANDIDATES:",
+                    peer.remoteDescription?.sdp
+                        ?.split("\r\n")
+                        .filter((line) => line.startsWith("a=candidate:"))
+                );
                 await flushPendingIceCandidates(payload.callerId, peer);
                 setStatus("connected");
             }
         }
 
         function handleIce(payload) {
-            if (!matchesCall(payload) || payload.callerId === userId) {
+            const isMatchingCall = matchesCall(payload);
+            const isCurrentUser = payload?.callerId === userId;
+
+            console.log("RAW call-ice-candidate RECEIVED:", {
+                callerId: payload?.callerId,
+                callId: payload?.callId,
+                currentCallId: callIdRef.current,
+                targetUserId: payload?.targetUserId,
+                targetPeerId: payload?.targetPeerId,
+                isMatchingCall,
+                isCurrentUser,
+                candidate: payload?.candidate?.candidate,
+            });
+
+            if (!isMatchingCall || isCurrentUser) {
+                console.warn("ICE CANDIDATE REJECTED BY FILTER", {
+                    isMatchingCall,
+                    isCurrentUser,
+                    callerId: payload?.callerId,
+                    userId,
+                    callId: payload?.callId,
+                    expectedCallId: callIdRef.current,
+                });
                 return;
             }
 
