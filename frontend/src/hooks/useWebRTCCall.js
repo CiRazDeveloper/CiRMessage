@@ -1,29 +1,19 @@
-import {
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { socket } from "../scripts/lib/socket.js";
 
-const turnUsername =
-    import.meta.env.VITE_TURN_USERNAME;
-const turnCredential =
-    import.meta.env.VITE_TURN_CREDENTIAL;
+const getId = (value) =>
+    value?._id?.toString() || value?.id?.toString() || value?.toString();
 
-const turnAuthentication =
-    turnUsername && turnCredential
-        ? {
-            username: turnUsername,
-            credential: turnCredential,
-        }
+const TURN_USERNAME = import.meta.env.VITE_TURN_USERNAME;
+const TURN_CREDENTIAL = import.meta.env.VITE_TURN_CREDENTIAL;
+const ICE_TRANSPORT_POLICY = import.meta.env.VITE_ICE_TRANSPORT_POLICY || "all";
+
+const turnAuth =
+    TURN_USERNAME && TURN_CREDENTIAL
+        ? { username: TURN_USERNAME, credential: TURN_CREDENTIAL }
         : {};
 
-const iceTransportPolicy =
-    import.meta.env.VITE_ICE_TRANSPORT_POLICY || "all";
-
-const configuredIceServers = [
+const ICE_SERVERS = [
     {
         urls:
             import.meta.env.VITE_STUN_URL ||
@@ -33,49 +23,18 @@ const configuredIceServers = [
         urls:
             import.meta.env.VITE_TURN_URL_UDP ||
             "turn:cirm.ciraz.online:3478?transport=udp",
-        ...turnAuthentication,
+        ...turnAuth,
     },
     {
         urls:
             import.meta.env.VITE_TURN_URL_TCP ||
             "turn:cirm.ciraz.online:3478?transport=tcp",
-        ...turnAuthentication,
+        ...turnAuth,
     },
 ];
 
-const ICE_SERVERS =
-    iceTransportPolicy === "relay"
-        ? configuredIceServers.filter((server) =>
-            Array.isArray(server.urls)
-                ? server.urls.some((url) =>
-                    url.startsWith("turn:") &&
-                    url.includes("transport=udp")
-                )
-                : server.urls.startsWith("turn:") &&
-                    server.urls.includes("transport=udp")
-        )
-        : configuredIceServers;
-
-function getId(value) {
-    return value?._id?.toString() || value?.id?.toString() || value?.toString();
-}
-
-function participantDetails(participant) {
-    return {
-        id: getId(participant),
-        name: participant?.displayName || participant?.username || "Participant",
-    };
-}
-
-function descriptionFromSdp(payload) {
-    if (!payload?.sdp) {
-        return null;
-    }
-
-    return {
-        type: payload.type || (payload.answer ? "answer" : "offer"),
-        sdp: payload.sdp,
-    };
+function makeCallId(userId, type) {
+    return `${userId}-${type}-${Date.now()}`;
 }
 
 export function useWebRTCCall({
@@ -85,593 +44,576 @@ export function useWebRTCCall({
     currentUser,
     enabled = true,
 }) {
+    const currentUserId = getId(currentUser);
+
     const [status, setStatus] = useState("idle");
     const [incomingCall, setIncomingCall] = useState(null);
     const [localStream, setLocalStream] = useState(null);
     const [remoteStreams, setRemoteStreams] = useState({});
+    const [callType, setCallType] = useState("video");
     const [isMuted, setIsMuted] = useState(false);
     const [isCameraOff, setIsCameraOff] = useState(false);
     const [isScreenSharing, setIsScreenSharing] = useState(false);
-    const [callType, setCallType] = useState("video");
-    const currentUserId = getId(currentUser);
-    const peersRef = useRef(new Map());
-    const peerGenerationRef = useRef(0);
-    const localStreamRef = useRef(null);
-    const screenTrackRef = useRef(null);
+
     const callIdRef = useRef(null);
     const callTypeRef = useRef("video");
-    const participantMap = useRef(new Map());
-    const pendingIceCandidates = useRef(new Map());
-    const remoteMediaStreams = useRef(new Map());
-    const participantNames = useMemo(
-        () =>
-            new Map(
-                participants
-                    .map(participantDetails)
-                    .filter((participant) => participant.id)
-                    .map((participant) => [participant.id, participant])
-            ),
-        [participants]
+    const localStreamRef = useRef(null);
+    const peersRef = useRef(new Map());
+    const pendingIceRef = useRef(new Map());
+    const screenTrackRef = useRef(null);
+
+    const participantNames = useMemo(() => {
+        const names = new Map();
+        for (const participant of participants) {
+            const id = getId(participant);
+            if (id) {
+                names.set(id, {
+                    id,
+                    name:
+                        participant?.displayName ||
+                        participant?.username ||
+                        "Participant",
+                });
+            }
+        }
+        return names;
+    }, [participants]);
+
+    const emitSignal = useCallback(
+        (event, payload = {}, peerId = null) => {
+            if (!socket.connected) {
+                console.warn(`Cannot emit ${event}: socket is disconnected`);
+                return;
+            }
+
+            socket.emit(event, {
+                ...payload,
+                callId: payload.callId || callIdRef.current,
+                ...(peerId ? { targetPeerId: peerId } : {}),
+                ...(isGroup
+                    ? { groupId: targetId }
+                    : { targetUserId: peerId || targetId }),
+            });
+        },
+        [isGroup, targetId]
     );
 
-    useEffect(() => {
-        participantMap.current = participantNames;
-    }, [participantNames]);
+    const stopScreenShare = useCallback(async () => {
+        const screenTrack = screenTrackRef.current;
+        if (!screenTrack) {
+            return;
+        }
 
-    const emitCall = useCallback((event, payload = {}, targetUserId) => {
-        socket.emit(event, {
-            ...payload,
-            callId: payload.callId || callIdRef.current,
-            ...(targetUserId && { targetPeerId: targetUserId }),
-            ...(isGroup
-                ? { groupId: targetId }
-                : { targetUserId: targetUserId || targetId }),
+        screenTrack.onended = null;
+        screenTrack.stop();
+        screenTrackRef.current = null;
+
+        const cameraTrack = localStreamRef.current?.getVideoTracks()[0] || null;
+        for (const peer of peersRef.current.values()) {
+            const sender = peer
+                .getSenders()
+                .find((item) => item.track?.kind === "video");
+            if (sender && cameraTrack) {
+                await sender.replaceTrack(cameraTrack);
+            }
+        }
+
+        setIsScreenSharing(false);
+    }, []);
+
+    const resetCall = useCallback(() => {
+        for (const peer of peersRef.current.values()) {
+            peer.onicecandidate = null;
+            peer.ontrack = null;
+            peer.onconnectionstatechange = null;
+            peer.close();
+        }
+
+        peersRef.current.clear();
+        pendingIceRef.current.clear();
+
+        if (screenTrackRef.current) {
+            screenTrackRef.current.onended = null;
+            screenTrackRef.current.stop();
+            screenTrackRef.current = null;
+        }
+
+        localStreamRef.current?.getTracks().forEach((track) => track.stop());
+        localStreamRef.current = null;
+        callIdRef.current = null;
+
+        setLocalStream(null);
+        setRemoteStreams({});
+        setIncomingCall(null);
+        setStatus("idle");
+        setIsMuted(false);
+        setIsCameraOff(false);
+        setIsScreenSharing(false);
+    }, []);
+
+    const endCall = useCallback(
+        (notify = true) => {
+            if (notify && callIdRef.current) {
+                emitSignal("call-end");
+            }
+            resetCall();
+        },
+        [emitSignal, resetCall]
+    );
+
+    const getLocalMedia = useCallback(async (type) => {
+        if (localStreamRef.current) {
+            return localStreamRef.current;
+        }
+
+        if (!navigator.mediaDevices?.getUserMedia) {
+            throw new Error("Calling is not supported by this browser");
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+            video: type === "video",
         });
-    }, [isGroup, targetId]);
 
-    const closePeer = useCallback((peerId) => {
-        peersRef.current.get(peerId)?.close();
-        peersRef.current.delete(peerId);
-        remoteMediaStreams.current.delete(peerId);
-        setRemoteStreams((streams) => {
-            const next = { ...streams };
-            delete next[peerId];
+        localStreamRef.current = stream;
+        setLocalStream(stream);
+        setIsCameraOff(type !== "video");
+        return stream;
+    }, []);
+
+    const flushIce = useCallback(async (peerId, peer) => {
+        const queued = pendingIceRef.current.get(peerId) || [];
+        pendingIceRef.current.delete(peerId);
+
+        for (const candidate of queued) {
+            try {
+                await peer.addIceCandidate(candidate);
+            } catch (error) {
+                console.error("Could not add queued ICE candidate:", error);
+            }
+        }
+    }, []);
+
+    const createPeer = useCallback(
+        (peerId, callId) => {
+            if (!peerId || peerId === currentUserId) {
+                return null;
+            }
+
+            const existing = peersRef.current.get(peerId);
+            if (existing && existing.connectionState !== "closed") {
+                return existing;
+            }
+
+            const peer = new RTCPeerConnection({
+                iceServers: ICE_SERVERS,
+                iceTransportPolicy: ICE_TRANSPORT_POLICY,
+            });
+
+            peersRef.current.set(peerId, peer);
+
+            for (const track of localStreamRef.current?.getTracks() || []) {
+                peer.addTrack(track, localStreamRef.current);
+            }
+
+            peer.onicecandidate = ({ candidate }) => {
+                if (!candidate) {
+                    return;
+                }
+
+                emitSignal(
+                    "call-ice-candidate",
+                    {
+                        callId,
+                        candidate: candidate.toJSON(),
+                    },
+                    peerId
+                );
+            };
+
+            peer.ontrack = ({ track, streams }) => {
+                const stream = streams[0] || new MediaStream([track]);
+
+                setRemoteStreams((current) => ({
+                    ...current,
+                    [peerId]: stream,
+                }));
+            };
+
+            peer.onconnectionstatechange = () => {
+                if (peer.connectionState === "connected") {
+                    setStatus("connected");
+                }
+
+                if (peer.connectionState === "failed") {
+                    console.error("WebRTC connection failed", { peerId });
+                }
+
+                if (peer.connectionState === "closed") {
+                    setRemoteStreams((current) => {
+                        const next = { ...current };
+                        delete next[peerId];
+                        return next;
+                    });
+                }
+            };
+
+            return peer;
+        },
+        [currentUserId, emitSignal]
+    );
+
+    const makeOffer = useCallback(
+        async (peerId, callId) => {
+            const peer = createPeer(peerId, callId);
+            if (!peer) {
+                return;
+            }
+
+            const offer = await peer.createOffer();
+            await peer.setLocalDescription(offer);
+
+            emitSignal(
+                "call-offer",
+                {
+                    callId,
+                    type: peer.localDescription.type,
+                    sdp: peer.localDescription.sdp,
+                },
+                peerId
+            );
+        },
+        [createPeer, emitSignal]
+    );
+
+    const startCall = useCallback(
+        async (type = "video") => {
+            if (!currentUserId || !targetId || callIdRef.current) {
+                return;
+            }
+
+            try {
+                callTypeRef.current = type;
+                setCallType(type);
+                await getLocalMedia(type);
+
+                const callId = makeCallId(currentUserId, type);
+                callIdRef.current = callId;
+                setStatus("calling");
+
+                emitSignal("call-invite", {
+                    callId,
+                    callType: type,
+                });
+            } catch (error) {
+                resetCall();
+                throw error;
+            }
+        },
+        [currentUserId, emitSignal, getLocalMedia, resetCall, targetId]
+    );
+
+    const acceptCall = useCallback(async () => {
+        const incoming = incomingCall;
+        if (!incoming) {
+            return;
+        }
+
+        try {
+            const type = incoming.callType || "video";
+            callTypeRef.current = type;
+            callIdRef.current = incoming.callId;
+            setCallType(type);
+
+            await getLocalMedia(type);
+
+            setIncomingCall(null);
+            setStatus("connecting");
+
+            emitSignal(
+                "call-accept",
+                { callId: incoming.callId },
+                incoming.callerId
+            );
+        } catch (error) {
+            emitSignal(
+                "call-reject",
+                { callId: incoming.callId },
+                incoming.callerId
+            );
+            resetCall();
+            throw error;
+        }
+    }, [emitSignal, getLocalMedia, incomingCall, resetCall]);
+
+    const rejectCall = useCallback(() => {
+        if (!incomingCall) {
+            return;
+        }
+
+        emitSignal(
+            "call-reject",
+            { callId: incomingCall.callId },
+            incomingCall.callerId
+        );
+        setIncomingCall(null);
+    }, [emitSignal, incomingCall]);
+
+    const toggleMute = useCallback(() => {
+        setIsMuted((muted) => {
+            const next = !muted;
+            localStreamRef.current
+                ?.getAudioTracks()
+                .forEach((track) => {
+                    track.enabled = !next;
+                });
             return next;
         });
     }, []);
 
-    const stopLocalMedia = useCallback(() => {
-        localStreamRef.current?.getTracks().forEach((track) => track.stop());
-        localStreamRef.current = null;
-        setLocalStream(null);
-    }, []);
-
-    const endCall = useCallback((notify = true) => {
-        if (notify && callIdRef.current) {
-            emitCall("call-end");
-        }
-        peersRef.current.forEach((peer) => peer.close());
-        peersRef.current.clear();
-        remoteMediaStreams.current.clear();
-        stopLocalMedia();
-        screenTrackRef.current?.stop();
-        screenTrackRef.current = null;
-        callIdRef.current = null;
-        setRemoteStreams({});
-        setIncomingCall(null);
-        setStatus("idle");
-        setIsScreenSharing(false);
-        setIsMuted(false);
-        setIsCameraOff(false);
-    }, [emitCall, stopLocalMedia]);
-
-    const ensureLocalStream = useCallback(async (requestedType = callTypeRef.current) => {
-        if (localStreamRef.current) {
-            return localStreamRef.current;
-        }
-        if (!navigator.mediaDevices?.getUserMedia) {
-            throw new Error("Calling is not supported by this browser");
-        }
-        const stream = await navigator.mediaDevices.getUserMedia({
-            audio: true,
-            video: requestedType === "video",
-        });
-        localStreamRef.current = stream;
-        setLocalStream(stream);
-        setIsCameraOff(requestedType !== "video");
-        return stream;
-    }, []);
-
-    const createPeer = useCallback((peerId, shouldOffer, callId) => {
-        if (!peerId || peerId === currentUserId) {
-            return null;
-        }
-        const existing = peersRef.current.get(peerId);
-        if (existing) {
-            return existing;
-        }
-
-        const generation = ++peerGenerationRef.current;
-        const peer = new RTCPeerConnection({
-            iceServers: ICE_SERVERS,
-            iceTransportPolicy,
-        });
-        console.log(`CREATE PEER #${generation}`, { peerId, callId, shouldOffer, signalingState: peer.signalingState, iceGatheringState: peer.iceGatheringState, connectionState: peer.connectionState });
-        peersRef.current.set(peerId, peer);
-        localStreamRef.current?.getTracks().forEach((track) => {
-            peer.addTrack(track, localStreamRef.current);
-        });
-        peer.onicecandidate = ({ candidate }) => {
-            if (candidate) {
-                console.log(`PC #${generation} LOCAL ICE for ${peerId}:`, candidate.candidate);
-                console.log(`PC #${generation} EMITTING ICE`, { peerId, callId, socketConnected: socket.connected, candidate: candidate.candidate });
-                emitCall("call-ice-candidate", {
-                    callId,
-                    candidate: candidate.toJSON ? candidate.toJSON() : candidate,
-                }, peerId);
-            } else {
-                console.log(`PC #${generation} ICE gathering finished for ${peerId}`);
-            }
-        };
-        peer.ontrack = ({ track, streams }) => {
-            let remoteStream = remoteMediaStreams.current.get(peerId);
-
-            if (!remoteStream) {
-                remoteStream = streams[0] || new MediaStream();
-                remoteMediaStreams.current.set(peerId, remoteStream);
-            }
-
-            if (!remoteStream.getTracks().some((item) => item.id === track.id)) {
-                remoteStream.addTrack(track);
-            }
-
-            console.info(
-                `Remote ${track.kind} track received from ${peerId}`,
-                {
-                    audioTracks: remoteStream.getAudioTracks().length,
-                    videoTracks: remoteStream.getVideoTracks().length,
-                }
-            );
-            setRemoteStreams((current) => ({
-                ...current,
-                [peerId]: remoteStream,
-            }));
-        };
-        peer.onconnectionstatechange = () => {
-            console.log(`PC #${generation} Connection state:`, peer.connectionState, `(${peerId})`);
-            if (["failed", "closed"].includes(peer.connectionState)) {
-                closePeer(peerId);
-            }
-        };
-        peer.oniceconnectionstatechange = () => {
-            console.log(`PC #${generation} ICE connection state:`, peer.iceConnectionState, `(${peerId})`);
-        };
-        peer.onicegatheringstatechange = () => {
-            console.log(`PC #${generation} ICE gathering state:`, peer.iceGatheringState, `(${peerId})`);
-        };
-        peer.onicecandidateerror = (event) => {
-            console.error("ICE candidate error:", {
-                url: event.url,
-                errorCode: event.errorCode,
-                errorText: event.errorText,
-                peerId,
-                generation,
-            });
-        };
-        if (shouldOffer) {
-            (async () => {
-                try {
-                    const offer = await peer.createOffer();
-                    console.log(`PC #${generation} BEFORE setLocalDescription(offer)`, { signalingState: peer.signalingState, iceGatheringState: peer.iceGatheringState, connectionState: peer.connectionState });
-                    await peer.setLocalDescription(offer);
-                    console.log(`PC #${generation} AFTER setLocalDescription(offer)`, { signalingState: peer.signalingState, iceGatheringState: peer.iceGatheringState, connectionState: peer.connectionState, localDescriptionType: peer.localDescription?.type });
-
-                    emitCall("call-offer", {
-                        callId,
-                        sdp: peer.localDescription.sdp,
-                        type: peer.localDescription.type,
-                    }, peerId);
-                } catch (error) {
-                    console.error(
-                        "Could not create call offer:",
-                        error
-                    );
-                }
-            })();
-        }
-        return peer;
-    }, [closePeer, currentUserId, emitCall]);
-
-    const flushPendingIceCandidates = useCallback(
-        async (peerId, peer) => {
-            const pending =
-                pendingIceCandidates.current.get(peerId) || [];
-
-            console.log(
-                `Flushing ${pending.length} ICE candidates for ${peerId}`
-            );
-
-            pendingIceCandidates.current.delete(peerId);
-
-            for (const candidate of pending) {
-                try {
-                    await peer.addIceCandidate(candidate);
-
-                    console.log(
-                        "QUEUED REMOTE ICE ADDED:",
-                        candidate.candidate
-                    );
-                } catch (error) {
-                    console.error(
-                        "QUEUED REMOTE ICE FAILED:",
-                        error,
-                        candidate
-                    );
-                }
-            }
-        },
-        []
-    );
-
-    const startCall = useCallback(async (requestedType = "video") => {
-        try {
-            callTypeRef.current = requestedType;
-            setCallType(requestedType);
-            await ensureLocalStream(requestedType);
-            callIdRef.current = `${currentUserId}-${requestedType}-${Date.now()}`;
-            setStatus("calling");
-            emitCall("call-invite", {
-                callId: callIdRef.current,
-                callType: requestedType,
-            });
-        } catch (error) {
-            console.error("Could not start call:", error);
-            setStatus("idle");
-            throw error;
-        }
-    }, [currentUserId, emitCall, ensureLocalStream]);
-
-    const acceptCall = useCallback(async () => {
-        if (!incomingCall) {
-            return;
-        }
-        try {
-            const acceptedType = incomingCall.callType || "video";
-            callTypeRef.current = acceptedType;
-            setCallType(acceptedType);
-            await ensureLocalStream(acceptedType);
-            callIdRef.current = incomingCall.callId;
-            setIncomingCall(null);
-            setStatus("connected");
-            emitCall(
-                "call-accept",
-                { targetPeerId: incomingCall.callerId },
-                incomingCall.callerId
-            );
-        } catch (error) {
-            console.error("Could not accept call:", error);
-            emitCall(
-                "call-reject",
-                { targetPeerId: incomingCall.callerId },
-                incomingCall.callerId
-            );
-            setIncomingCall(null);
-        }
-    }, [emitCall, ensureLocalStream, incomingCall]);
-
-    const rejectCall = useCallback(() => {
-        if (incomingCall) {
-            emitCall(
-                "call-reject",
-                { targetPeerId: incomingCall.callerId },
-                incomingCall.callerId
-            );
-        }
-        setIncomingCall(null);
-    }, [emitCall, incomingCall]);
-
-    const toggleMute = useCallback(() => {
-        const next = !isMuted;
-        localStreamRef.current?.getAudioTracks().forEach((track) => {
-            track.enabled = !next;
-        });
-        setIsMuted(next);
-    }, [isMuted]);
-
     const toggleCamera = useCallback(() => {
-        const next = !isCameraOff;
-        localStreamRef.current?.getVideoTracks().forEach((track) => {
-            track.enabled = !next;
+        setIsCameraOff((off) => {
+            const next = !off;
+            localStreamRef.current
+                ?.getVideoTracks()
+                .forEach((track) => {
+                    track.enabled = !next;
+                });
+            return next;
         });
-        setIsCameraOff(next);
-    }, [isCameraOff]);
+    }, []);
 
     const toggleScreenShare = useCallback(async () => {
-        if (isScreenSharing) {
-            if (screenTrackRef.current) {
-                screenTrackRef.current.onended = null;
-            }
-            screenTrackRef.current?.stop();
-            const cameraTrack = localStreamRef.current?.getVideoTracks()[0];
-            peersRef.current.forEach((peer) => {
-                const sender = peer.getSenders().find((item) => item.track?.kind === "video");
-                if (sender && cameraTrack) {
-                    sender.replaceTrack(cameraTrack);
-                }
-            });
-            emitCall("call-screen-share", { screenSharing: false });
-            screenTrackRef.current = null;
-            setIsScreenSharing(false);
+        if (screenTrackRef.current) {
+            await stopScreenShare();
             return;
         }
+
         if (!navigator.mediaDevices?.getDisplayMedia) {
             throw new Error("Screen sharing is not supported by this browser");
         }
-        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-        const screenTrack = screenStream.getVideoTracks()[0];
-        screenTrackRef.current = screenTrack;
-        peersRef.current.forEach((peer) => {
-            const sender = peer.getSenders().find((item) => item.track?.kind === "video");
-            if (sender) {
-                sender.replaceTrack(screenTrack);
-            }
+
+        const displayStream = await navigator.mediaDevices.getDisplayMedia({
+            video: true,
         });
+        const screenTrack = displayStream.getVideoTracks()[0];
+        screenTrackRef.current = screenTrack;
+
+        for (const peer of peersRef.current.values()) {
+            const sender = peer
+                .getSenders()
+                .find((item) => item.track?.kind === "video");
+            if (sender) {
+                await sender.replaceTrack(screenTrack);
+            }
+        }
+
         screenTrack.onended = () => {
-            const cameraTrack =
-                localStreamRef.current?.getVideoTracks()[0];
-
-            peersRef.current.forEach((peer) => {
-                const sender = peer
-                    .getSenders()
-                    .find(
-                        (item) =>
-                            item.track?.kind === "video"
-                    );
-
-                if (sender && cameraTrack) {
-                    sender.replaceTrack(cameraTrack);
-                }
-            });
-
-            screenTrackRef.current = null;
-            setIsScreenSharing(false);
-            emitCall("call-screen-share", {
-                screenSharing: false,
-            });
+            stopScreenShare().catch(console.error);
         };
         setIsScreenSharing(true);
-        emitCall("call-screen-share", { screenSharing: true });
-    }, [emitCall, isScreenSharing]);
+    }, [stopScreenShare]);
 
     useEffect(() => {
-        if (!enabled) {
+        if (!enabled || !currentUserId || !targetId) {
             return undefined;
         }
-        const userId = currentUserId;
-        const matchesCall = (payload, allowNewCall = false) => {
-            if (callIdRef.current) {
-                return payload?.callId === callIdRef.current;
-            }
-            if (!allowNewCall) {
+
+        const isOurCall = (payload) =>
+            Boolean(
+                payload?.callId &&
+                callIdRef.current &&
+                payload.callId === callIdRef.current
+            );
+
+        const isInviteForThisChat = (payload) => {
+            if (!payload || payload.callerId === currentUserId) {
                 return false;
             }
-            return isGroup
-                ? payload?.groupId === targetId
-                : payload?.callerId === targetId && payload?.targetUserId === userId;
+
+            if (isGroup) {
+                return payload.groupId === targetId;
+            }
+
+            return (
+                payload.callerId === targetId &&
+                payload.targetUserId === currentUserId
+            );
         };
 
-        function handleInvite(payload) {
-            if (!matchesCall(payload, true) || payload.callerId === userId) {
+        const onInvite = (payload) => {
+            if (callIdRef.current || !isInviteForThisChat(payload)) {
                 return;
             }
-            const caller = participantMap.current.get(payload.callerId);
+
+            callIdRef.current = payload.callId;
+            callTypeRef.current = payload.callType || "video";
+            setCallType(callTypeRef.current);
             setIncomingCall({
                 ...payload,
-                callerId: payload.callerId,
-                callType: payload.callType || payload.callId?.split("-").slice(-2, -1)[0] || "video",
-                callerName: caller?.name || "Incoming call",
+                callerName:
+                    participantNames.get(payload.callerId)?.name ||
+                    "Incoming call",
             });
-        }
+            setStatus("ringing");
+        };
 
-        function handleAccept(payload) {
-            if (!matchesCall(payload) || payload.callerId === userId) {
+        const onAccept = async (payload) => {
+            if (!isOurCall(payload) || payload.callerId === currentUserId) {
                 return;
             }
-            setStatus("connected");
-            createPeer(payload.callerId, true, payload.callId);
-        }
 
-        async function handleOffer(payload) {
-            if (!matchesCall(payload) || payload.callerId === userId) {
+            try {
+                setStatus("connecting");
+                await makeOffer(payload.callerId, payload.callId);
+            } catch (error) {
+                console.error("Could not create WebRTC offer:", error);
+                endCall(true);
+            }
+        };
+
+        const onOffer = async (payload) => {
+            if (!isOurCall(payload) || payload.callerId === currentUserId) {
                 return;
             }
-            const peerId = payload.callerId;
-            const peer = createPeer(peerId, false, payload.callId);
-            const description = descriptionFromSdp(payload);
-            if (!peer || !description) {
-                return;
-            }
-            console.log("BEFORE setRemoteDescription(offer)", { peerId, signalingState: peer.signalingState, iceGatheringState: peer.iceGatheringState, connectionState: peer.connectionState });
-            await peer.setRemoteDescription(description);
-            console.log("AFTER setRemoteDescription(offer)", { peerId, signalingState: peer.signalingState, iceGatheringState: peer.iceGatheringState, connectionState: peer.connectionState });
-            console.log(
-                "REMOTE SDP ICE CANDIDATES:",
-                peer.remoteDescription?.sdp
-                    ?.split("\r\n")
-                    .filter((line) => line.startsWith("a=candidate:"))
-            );
-            await flushPendingIceCandidates(peerId, peer);
-            console.log("BEFORE createAnswer", { peerId, signalingState: peer.signalingState, iceGatheringState: peer.iceGatheringState, connectionState: peer.connectionState });
-            const answer = await peer.createAnswer();
-            console.log("BEFORE setLocalDescription(answer)", { peerId, signalingState: peer.signalingState, iceGatheringState: peer.iceGatheringState, connectionState: peer.connectionState });
-            await peer.setLocalDescription(answer);
-            console.log("AFTER setLocalDescription(answer)", { peerId, signalingState: peer.signalingState, iceGatheringState: peer.iceGatheringState, connectionState: peer.connectionState, localDescriptionType: peer.localDescription?.type });
-            emitCall("call-answer", {
-                callId: payload.callId,
-                sdp: peer.localDescription.sdp,
-                type: peer.localDescription.type,
-            }, peerId);
-            setStatus("connected");
-        }
 
-        async function handleAnswer(payload) {
-            if (!matchesCall(payload) || payload.callerId === userId) {
-                return;
-            }
-            const peer = peersRef.current.get(payload.callerId);
-            const description = descriptionFromSdp(payload);
-            if (peer && description) {
-                await peer.setRemoteDescription(description);
-                console.log(
-                    "REMOTE SDP ICE CANDIDATES:",
-                    peer.remoteDescription?.sdp
-                        ?.split("\r\n")
-                        .filter((line) => line.startsWith("a=candidate:"))
-                );
-                await flushPendingIceCandidates(payload.callerId, peer);
-                setStatus("connected");
-            }
-        }
+            try {
+                const peerId = payload.callerId;
+                const peer = createPeer(peerId, payload.callId);
+                if (!peer) {
+                    return;
+                }
 
-        function handleIce(payload) {
-            const isMatchingCall = matchesCall(payload);
-            const isCurrentUser = payload?.callerId === userId;
-
-            console.log("RAW call-ice-candidate RECEIVED:", {
-                callerId: payload?.callerId,
-                callId: payload?.callId,
-                currentCallId: callIdRef.current,
-                targetUserId: payload?.targetUserId,
-                targetPeerId: payload?.targetPeerId,
-                isMatchingCall,
-                isCurrentUser,
-                candidate: payload?.candidate?.candidate,
-            });
-
-            if (!isMatchingCall || isCurrentUser) {
-                console.warn("ICE CANDIDATE REJECTED BY FILTER", {
-                    isMatchingCall,
-                    isCurrentUser,
-                    callerId: payload?.callerId,
-                    userId,
-                    callId: payload?.callId,
-                    expectedCallId: callIdRef.current,
+                await peer.setRemoteDescription({
+                    type: "offer",
+                    sdp: payload.sdp,
                 });
+                await flushIce(peerId, peer);
+
+                const answer = await peer.createAnswer();
+                await peer.setLocalDescription(answer);
+
+                emitSignal(
+                    "call-answer",
+                    {
+                        callId: payload.callId,
+                        type: peer.localDescription.type,
+                        sdp: peer.localDescription.sdp,
+                    },
+                    peerId
+                );
+            } catch (error) {
+                console.error("Could not handle WebRTC offer:", error);
+                endCall(true);
+            }
+        };
+
+        const onAnswer = async (payload) => {
+            if (!isOurCall(payload) || payload.callerId === currentUserId) {
                 return;
             }
-
-            console.log(
-                "REMOTE ICE RECEIVED:",
-                {
-                    from: payload.callerId,
-                    candidate: payload.candidate?.candidate,
-                    callId: payload.callId,
-                    hasPeer: peersRef.current.has(payload.callerId),
-                }
-            );
 
             const peer = peersRef.current.get(payload.callerId);
-
-            if (!payload.candidate) {
-                console.warn("REMOTE ICE payload has no candidate", payload);
+            if (!peer) {
                 return;
             }
 
-            if (peer?.remoteDescription) {
-                console.log(
-                    "Adding REMOTE ICE immediately:",
-                    payload.candidate.candidate
-                );
+            try {
+                await peer.setRemoteDescription({
+                    type: "answer",
+                    sdp: payload.sdp,
+                });
+                await flushIce(payload.callerId, peer);
+            } catch (error) {
+                console.error("Could not handle WebRTC answer:", error);
+                endCall(true);
+            }
+        };
 
-                peer.addIceCandidate(payload.candidate)
-                    .then(() => {
-                        console.log(
-                            "REMOTE ICE ADDED:",
-                            payload.candidate.candidate
-                        );
-                    })
-                    .catch((error) => {
-                        console.error(
-                            "REMOTE ICE ADD FAILED:",
-                            error,
-                            payload.candidate
-                        );
-                    });
-
+        const onIceCandidate = async (payload) => {
+            if (
+                !isOurCall(payload) ||
+                payload.callerId === currentUserId ||
+                !payload.candidate
+            ) {
                 return;
             }
 
-            console.log(
-                "Queuing REMOTE ICE:",
-                {
-                    from: payload.callerId,
-                    hasPeer: Boolean(peer),
-                    remoteDescription: Boolean(peer?.remoteDescription),
-                    candidate: payload.candidate.candidate,
-                }
-            );
+            const peerId = payload.callerId;
+            const peer = peersRef.current.get(peerId);
 
-            const pending =
-                pendingIceCandidates.current.get(payload.callerId) || [];
-
-            pending.push(payload.candidate);
-
-            pendingIceCandidates.current.set(
-                payload.callerId,
-                pending
-            );
-        }
-
-        function handleEnd(payload) {
-            if (payload?.callId === callIdRef.current) {
-                endCall(false);
+            if (!peer || !peer.remoteDescription) {
+                const queued = pendingIceRef.current.get(peerId) || [];
+                queued.push(payload.candidate);
+                pendingIceRef.current.set(peerId, queued);
+                return;
             }
-        }
 
-        function handleReject(payload) {
-            if (payload?.callId === callIdRef.current && !isGroup) {
-                endCall(false);
+            try {
+                await peer.addIceCandidate(payload.candidate);
+            } catch (error) {
+                console.error("Could not add ICE candidate:", error);
             }
-        }
+        };
 
-        socket.on("call-invite", handleInvite);
-        socket.on("call-accept", handleAccept);
-        socket.on("call-offer", handleOffer);
-        socket.on("call-answer", handleAnswer);
-        socket.on("call-ice-candidate", handleIce);
-        socket.on("call-reject", handleReject);
-        socket.on("call-end", handleEnd);
+        const onReject = (payload) => {
+            if (isOurCall(payload)) {
+                resetCall();
+            }
+        };
+
+        const onEnd = (payload) => {
+            if (isOurCall(payload)) {
+                resetCall();
+            }
+        };
+
+        socket.on("call-invite", onInvite);
+        socket.on("call-accept", onAccept);
+        socket.on("call-offer", onOffer);
+        socket.on("call-answer", onAnswer);
+        socket.on("call-ice-candidate", onIceCandidate);
+        socket.on("call-reject", onReject);
+        socket.on("call-end", onEnd);
+
         return () => {
-            socket.off("call-invite", handleInvite);
-            socket.off("call-accept", handleAccept);
-            socket.off("call-offer", handleOffer);
-            socket.off("call-answer", handleAnswer);
-            socket.off("call-ice-candidate", handleIce);
-            socket.off("call-reject", handleReject);
-            socket.off("call-end", handleEnd);
+            socket.off("call-invite", onInvite);
+            socket.off("call-accept", onAccept);
+            socket.off("call-offer", onOffer);
+            socket.off("call-answer", onAnswer);
+            socket.off("call-ice-candidate", onIceCandidate);
+            socket.off("call-reject", onReject);
+            socket.off("call-end", onEnd);
         };
     }, [
         createPeer,
         currentUserId,
-        emitCall,
+        emitSignal,
         enabled,
         endCall,
-        flushPendingIceCandidates,
+        flushIce,
         isGroup,
+        makeOffer,
+        participantNames,
+        resetCall,
         targetId,
     ]);
 
-    useEffect(() => () => endCall(false), [endCall]);
+    useEffect(() => {
+        return () => {
+            resetCall();
+        };
+    }, [resetCall]);
 
     return {
         status,
         incomingCall,
         localStream,
         remoteStreams,
+        callType,
         isMuted,
         isCameraOff,
         isScreenSharing,
-        callType,
         startCall,
         acceptCall,
         rejectCall,
