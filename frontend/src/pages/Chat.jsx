@@ -25,7 +25,10 @@ function Chat() {
     const location = useLocation();
     const { id } = useParams();
 
-    const user = location.state?.user;
+    const user =
+        location.state?.user ||
+        location.state?.incomingCall?.caller ||
+        null;
     const currentUser = getUser();
     const [loadedGroup, setLoadedGroup] = useState(null);
     const group = location.state?.group || loadedGroup;
@@ -50,6 +53,7 @@ function Chat() {
         participants: callParticipants,
         currentUser,
         enabled: Boolean(id),
+        initialIncomingCall: location.state?.incomingCall || null,
     });
 
     const scrollToBottom = useCallback(() => {
