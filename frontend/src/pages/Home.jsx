@@ -332,210 +332,68 @@ function Home() {
     // --- PROFILE ---
     // MY STATUS
     useEffect(() => {
-        function applyStatus(status) {
+        const applyStatus = (status) => {
+            if (!statuses.includes(status)) {
+                return;
+            }
+
+            setPresenceStatus(status);
+        };
+
+        const handleStatusChanged = ({ userId, status }) => {
+            if (
+                userId?.toString() ===
+                currentUser?._id?.toString()
+            ) {
+                applyStatus(status);
+            }
+        };
+
+        const handleManualStatusChanged = (event) => {
+            const status = event.detail?.status;
             if (!statuses.includes(status)) {
                 return;
             }
 
             setActivityStatus(status);
             setPresenceStatus(status);
-            setStatus(status);
-        }
-
-        function requestCurrentStatus() {
-            socket.emit(
-                "get-my-status",
-                (response) => {
-                    applyStatus(response?.status);
-                }
-            );
-        }
-
-        function handleStatusChanged({
-            userId,
-            status,
-        }) {
-            if (
-                userId?.toString() !==
-                currentUser?._id?.toString()
-            ) {
-                return;
-            }
-
-            applyStatus(status);
-        }
-
-        socket.on(
-            "connect",
-            requestCurrentStatus
-        );
+        };
 
         socket.on(
             "user-status-changed",
             handleStatusChanged
         );
-
-        if (socket.connected) {
-            requestCurrentStatus();
-        }
+        window.addEventListener(
+            "activity-status-changed",
+            handleManualStatusChanged
+        );
 
         return () => {
-            socket.off(
-                "connect",
-                requestCurrentStatus
-            );
-
             socket.off(
                 "user-status-changed",
                 handleStatusChanged
             );
+            window.removeEventListener(
+                "activity-status-changed",
+                handleManualStatusChanged
+            );
         };
     }, [currentUser?._id]);
 
-    useEffect(() => {
-        if (activityStatus !== "Online") {
+    const handleStatusChange = (status) => {
+        if (!statuses.includes(status)) {
             return;
         }
 
-        const CHECK_INTERVAL_MS = 60 * 1000;
-        const AWAY_AFTER_MS = 5 * 60 * 1000;
+        setActivityStatus(status);
+        setPresenceStatus(status);
+        setStatus(status);
 
-        let lastActivity = Date.now();
-        let currentPresenceStatus = "Online";
-
-        const changePresenceStatus = (status) => {
-            if (currentPresenceStatus === status) {
-                return;
-            }
-
-            currentPresenceStatus = status;
-
-            setPresenceStatus(status);
-
-            socket.emit(
-                "set-status",
-                status
-            );
-        };
-
-        const handleActivity = () => {
-            lastActivity = Date.now();
-
-            if (
-                currentPresenceStatus === "Away"
-            ) {
-                changePresenceStatus("Online");
-            }
-        };
-
-        const checkActivity = () => {
-            const inactiveFor =
-                Date.now() - lastActivity;
-
-            if (
-                inactiveFor >= AWAY_AFTER_MS
-            ) {
-                changePresenceStatus("Away");
-            }
-        };
-
-        const handleVisibilityChange = () => {
-            if (document.hidden) {
-                return;
-            }
-
-            lastActivity = Date.now();
-
-            if (
-                currentPresenceStatus === "Away"
-            ) {
-                changePresenceStatus("Online");
-            }
-        };
-
-        const activityEvents = [
-            "mousedown",
-            "keydown",
-            "touchstart",
-            "scroll",
-        ];
-
-        activityEvents.forEach((event) => {
-            window.addEventListener(
-                event,
-                handleActivity
-            );
-        });
-
-        document.addEventListener(
-            "visibilitychange",
-            handleVisibilityChange
-        );
-
-        const activityCheckInterval =
-            setInterval(
-                checkActivity,
-                CHECK_INTERVAL_MS
-            );
-
-        return () => {
-            clearInterval(
-                activityCheckInterval
-            );
-
-            activityEvents.forEach((event) => {
-                window.removeEventListener(
-                    event,
-                    handleActivity
-                );
-            });
-
-            document.removeEventListener(
-                "visibilitychange",
-                handleVisibilityChange
-            );
-        };
-    }, [activityStatus]);
-
-    const handleStatusChange = (status) => {
-        console.log(
-            "Manual status change:",
-            status,
-            typeof status
-        );
-
-        socket.emit(
-            "set-status",
-            status,
-            (response) => {
-                if (!response?.success) {
-                    console.error(
-                        "Could not change status:",
-                        response?.message
-                    );
-                    showNotification(
-                        response?.message ||
-                            "Could not change status",
-                        "error"
-                    );
-
-                    return;
-                }
-
-                setActivityStatus(status);
-                setPresenceStatus(status);
-                setStatus(status);
-
-                console.log(
-                    `Status changed to ${response.status}`
-                );
-                showNotification(
-                    `Status changed to ${response.status}`,
-                    "success",
-                    {
-                        dismiss: "automatic",
-                    }
-                );
+        showNotification(
+            `Status changed to ${status}`,
+            "success",
+            {
+                dismiss: "automatic",
             }
         );
     };
