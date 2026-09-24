@@ -126,10 +126,8 @@ export function CallControlButton({
             onClick={onClick}
             disabled={disabled}
             aria-label={label}
-            title={label}
         >
             <CallIcon name={icon} />
-            <span className="call-button-label">{label}</span>
         </button>
     );
 }
@@ -193,7 +191,6 @@ function RemoteVideoTile({ stream, name }) {
                         className="call-video-action-button"
                         onClick={() => setIsExpanded((expanded) => !expanded)}
                         aria-label={isExpanded ? "Exit full screen" : "Full screen"}
-                        title={isExpanded ? "Exit full screen" : "Full screen"}
                     >
                         <CallIcon name={isExpanded ? "minimize" : "maximize"} />
                     </button>
@@ -203,7 +200,6 @@ function RemoteVideoTile({ stream, name }) {
                         type="button"
                         className="call-video-action-button"
                         aria-label="Close shared screen"
-                        title="Close shared screen"
                         onClick={() => setHidden(true)}
                     >
                         <CallIcon name="close" />
