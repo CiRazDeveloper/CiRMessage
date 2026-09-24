@@ -25,11 +25,16 @@ function Chat() {
     const location = useLocation();
     const { id } = useParams();
 
-    const user =
+    const routeUser =
         location.state?.user ||
         location.state?.incomingCall?.caller ||
         null;
     const currentUser = getUser();
+    const [loadedUser, setLoadedUser] = useState(null);
+    const user =
+        routeUser && loadedUser
+            ? { ...loadedUser, ...routeUser }
+            : routeUser || loadedUser;
     const [loadedGroup, setLoadedGroup] = useState(null);
     const group = location.state?.group || loadedGroup;
     const isGroup = Boolean(location.state?.group) ||
@@ -86,6 +91,68 @@ function Chat() {
         loadGroup();
     }, [id, isGroup, group, showNotification]);
 
+
+    // --- DIRECT CHAT USER ---
+    useEffect(() => {
+        if (!id || isGroup) {
+            setLoadedUser(null);
+            return;
+        }
+
+        const routeUserId =
+            routeUser?._id?.toString() ||
+            routeUser?.id?.toString();
+
+        if (
+            routeUserId === id &&
+            routeUser?.displayName &&
+            routeUser?.username
+        ) {
+            setLoadedUser(null);
+            return;
+        }
+
+        let cancelled = false;
+
+        async function loadChatUser() {
+            try {
+                const response = await axiosInstance.get(
+                    "/messages/contacts"
+                );
+
+                const foundUser = response.data.find(
+                    (contact) =>
+                        contact?._id?.toString() === id
+                );
+
+                if (!cancelled) {
+                    setLoadedUser(foundUser || null);
+                }
+            } catch (error) {
+                console.error(
+                    "Could not load chat user:",
+                    error
+                );
+
+                if (!cancelled) {
+                    setLoadedUser(null);
+                }
+            }
+        }
+
+        loadChatUser();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [
+        id,
+        isGroup,
+        routeUser?._id,
+        routeUser?.id,
+        routeUser?.displayName,
+        routeUser?.username,
+    ]);
 
     // --- PROFILE PICTURE ---
     useEffect(() => {
@@ -146,49 +213,56 @@ function Chat() {
     // --- STATUS ---
     useEffect(() => {
         if (!id || isGroup) {
-            return;
+            return undefined;
         }
 
-        socket.emit(
-            "get-user-status",
-            id,
-            (response) => {
-                const status =
-                    response?.status || "Offline";
+        let cancelled = false;
 
-                console.log(
-                    "Initial chat partner status:",
-                    status
-                );
-
-                setChatPartnerStatus(status);
+        const requestStatus = () => {
+            if (!socket.connected) {
+                return;
             }
-        );
+
+            socket.emit(
+                "get-user-status",
+                id,
+                (response) => {
+                    if (cancelled) {
+                        return;
+                    }
+
+                    setChatPartnerStatus(
+                        response?.status || "Offline"
+                    );
+                }
+            );
+        };
 
         function handleStatusChanged({
             userId,
             status,
         }) {
-            console.log(
-                "Received user-status-changed:",
-                {
-                    userId,
-                    status,
-                    chatPartnerId: id,
-                }
-            );
-
-            if (userId === id) {
-                setChatPartnerStatus(status);
+            if (
+                userId?.toString() ===
+                id?.toString()
+            ) {
+                setChatPartnerStatus(
+                    status || "Offline"
+                );
             }
         }
 
+        socket.on("connect", requestStatus);
         socket.on(
             "user-status-changed",
             handleStatusChanged
         );
 
+        requestStatus();
+
         return () => {
+            cancelled = true;
+            socket.off("connect", requestStatus);
             socket.off(
                 "user-status-changed",
                 handleStatusChanged
