@@ -17,7 +17,9 @@ import {
     prepareMediaForUpload,
 } from "../scripts/media.js";
 import { useWebRTCCall } from "../hooks/useWebRTCCall.js";
-import CallPanel from "../components/CallPanel.jsx";
+import CallPanel, {
+    CallControlButton,
+} from "../components/CallPanel.jsx";
 
 function Chat() {
     const navigate = useNavigate();
@@ -803,6 +805,23 @@ function Chat() {
                         </span>
                     </div>
                 </div>
+
+                {call.status === "idle" && !call.incomingCall && (
+                    <div className="chat-header-call-actions">
+                        <CallControlButton
+                            label="Audio call"
+                            icon="phone"
+                            className="chat-header-call-button"
+                            onClick={() => call.startCall("audio")}
+                        />
+                        <CallControlButton
+                            label="Video call"
+                            icon="video"
+                            className="chat-header-call-button"
+                            onClick={() => call.startCall("video")}
+                        />
+                    </div>
+                )}
             </header>
 
             <CallPanel
