@@ -145,6 +145,7 @@ const createCallPayload = (
         "participantId",
         "targetPeerId",
         "screenSharing",
+        "screenMid",
         "enabled",
     ];
 
