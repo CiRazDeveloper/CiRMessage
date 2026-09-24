@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-function CallIcon({ name }) {
+export function CallIcon({ name }) {
     const common = {
         width: 20,
         height: 20,
@@ -112,7 +112,7 @@ function CallIcon({ name }) {
     }
 }
 
-function CallControlButton({
+export function CallControlButton({
     label,
     icon,
     onClick,
@@ -275,22 +275,7 @@ export default function CallPanel({ call, participantNames = new Map() }) {
     } = call;
 
     if (status === "idle" && !incomingCall) {
-        return (
-            <div className="call-start-actions">
-                <CallControlButton
-                    label="Audio call"
-                    icon="phone"
-                    className="call-start-button"
-                    onClick={() => startCall("audio")}
-                />
-                <CallControlButton
-                    label="Video call"
-                    icon="video"
-                    className="call-start-button"
-                    onClick={() => startCall("video")}
-                />
-            </div>
-        );
+        return null;
     }
 
     return (
