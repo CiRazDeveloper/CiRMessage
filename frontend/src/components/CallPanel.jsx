@@ -119,6 +119,7 @@ export default function CallPanel({ call, participantNames = new Map() }) {
         incomingCall,
         localStream,
         remoteStreams,
+        remoteScreenStreams,
         callType,
         isMuted,
         isCameraOff,
@@ -176,7 +177,11 @@ export default function CallPanel({ call, participantNames = new Map() }) {
                 </div>
             )}
 
-            {(callType === "video" || Object.keys(remoteStreams).length > 0) && (
+            {(callType === "video" ||
+                Object.values(remoteStreams).some(
+                    (stream) => stream.getVideoTracks().length > 0
+                ) ||
+                Object.keys(remoteScreenStreams).length > 0) && (
                 <div className="call-video-grid">
                     {callType === "video" && localStream && (
                         <div className="call-video-tile">
@@ -187,16 +192,25 @@ export default function CallPanel({ call, participantNames = new Map() }) {
 
                     {Object.entries(remoteStreams).map(([id, stream]) =>
                         stream.getVideoTracks().length > 0 ? (
-                            <RemoteVideoTile
-                                key={id}
-                                stream={stream}
-                                name={
-                                    participantNames.get(id)?.name ||
-                                    "Participant"
-                                }
-                            />
+                            <div className="call-video-tile" key={`camera-${id}`}>
+                                <MediaElement stream={stream} video muted />
+                                <span>
+                                    {participantNames.get(id)?.name ||
+                                        "Participant"}
+                                </span>
+                            </div>
                         ) : null
                     )}
+
+                    {Object.entries(remoteScreenStreams).map(([id, stream]) => (
+                        <RemoteVideoTile
+                            key={`screen-${id}`}
+                            stream={stream}
+                            name={`${
+                                participantNames.get(id)?.name || "Participant"
+                            }'s screen`}
+                        />
+                    ))}
                 </div>
             )}
 
