@@ -8,4 +8,10 @@ export const statuses = [
 
 export function setStatus(status) {
     localStorage.setItem(ACTIVITY_STATUS, status);
+
+    window.dispatchEvent(
+        new CustomEvent("activity-status-changed", {
+            detail: { status },
+        })
+    );
 }
