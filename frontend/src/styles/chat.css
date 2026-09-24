@@ -115,6 +115,27 @@
     opacity: 0.7;
 }
 
+.chat-header-call-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.chat-header-call-button {
+    width: 38px;
+    height: 38px;
+    flex-basis: 38px;
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+.chat-header-call-button:hover {
+    background: #ffffff12;
+    border-color: #ffffff12;
+}
+
 /* CALLING */
 .call-start-actions {
     display: flex;
@@ -942,6 +963,16 @@
 @media (max-width: 768px) {
     .chat-header {
         padding: 10px 12px;
+    }
+
+    .chat-header-call-actions {
+        gap: 4px;
+    }
+
+    .chat-header-call-button {
+        width: 36px;
+        height: 36px;
+        flex-basis: 36px;
     }
 
     .chat-messages {
