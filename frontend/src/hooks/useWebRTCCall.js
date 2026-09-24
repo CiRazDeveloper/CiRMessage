@@ -52,6 +52,7 @@ export function useWebRTCCall({
     const [incomingCall, setIncomingCall] = useState(initialIncomingCall);
     const [localStream, setLocalStream] = useState(null);
     const [remoteStreams, setRemoteStreams] = useState({});
+    const [remoteScreenStreams, setRemoteScreenStreams] = useState({});
     const [callType, setCallType] = useState("video");
     const [isMuted, setIsMuted] = useState(false);
     const [isCameraOff, setIsCameraOff] = useState(false);
@@ -63,6 +64,9 @@ export function useWebRTCCall({
     const localStreamRef = useRef(null);
     const peersRef = useRef(new Map());
     const pendingIceRef = useRef(new Map());
+    const remoteScreenMidsRef = useRef(new Map());
+    const remoteScreenTracksRef = useRef(new Map());
+    const remoteScreenActiveRef = useRef(new Map());
     const screenTrackRef = useRef(null);
     const screenSendersRef = useRef(new Map());
     const initialIncomingCallRef = useRef(initialIncomingCall);
@@ -125,18 +129,28 @@ export function useWebRTCCall({
         screenTrack.onended = null;
         screenTrackRef.current = null;
 
-        for (const sender of screenSendersRef.current.values()) {
+        for (const [peerId, screenSender] of screenSendersRef.current.entries()) {
             try {
-                await sender.replaceTrack(null);
+                await screenSender.sender.replaceTrack(null);
+
+                emitSignal(
+                    "call-screen-share",
+                    {
+                        callId: callIdRef.current,
+                        screenSharing: false,
+                        screenMid: screenSender.transceiver.mid,
+                    },
+                    peerId
+                );
             } catch (error) {
-                console.error("Could not stop screen sender:", error);
+                console.error("Could not stop screen sharing:", error);
             }
         }
 
         screenTrack.stop();
         setScreenStream(null);
         setIsScreenSharing(false);
-    }, []);
+    }, [emitSignal]);
 
     const resetCall = useCallback(() => {
         for (const peer of peersRef.current.values()) {
@@ -148,6 +162,9 @@ export function useWebRTCCall({
 
         peersRef.current.clear();
         pendingIceRef.current.clear();
+        remoteScreenMidsRef.current.clear();
+        remoteScreenTracksRef.current.clear();
+        remoteScreenActiveRef.current.clear();
         screenSendersRef.current.clear();
 
         if (screenTrackRef.current) {
@@ -162,6 +179,7 @@ export function useWebRTCCall({
 
         setLocalStream(null);
         setRemoteStreams({});
+        setRemoteScreenStreams({});
         setIncomingCall(null);
         setStatus("idle");
         setIsMuted(false);
@@ -250,16 +268,50 @@ export function useWebRTCCall({
                 );
             };
 
-            peer.ontrack = ({ track, streams }) => {
+            peer.ontrack = ({ track, streams, transceiver }) => {
+                const publishScreenTrack = () => {
+                    if (!remoteScreenActiveRef.current.get(peerId)) {
+                        return;
+                    }
+
+                    setRemoteScreenStreams((current) => ({
+                        ...current,
+                        [peerId]: new MediaStream([track]),
+                    }));
+                };
+
+                const screenMid = remoteScreenMidsRef.current.get(peerId);
+                if (screenMid && transceiver?.mid === screenMid) {
+                    remoteScreenTracksRef.current.set(peerId, track);
+
+                    track.onunmute = publishScreenTrack;
+                    track.onended = () => {
+                        if (
+                            remoteScreenTracksRef.current.get(peerId)?.id ===
+                            track.id
+                        ) {
+                            remoteScreenTracksRef.current.delete(peerId);
+                        }
+
+                        setRemoteScreenStreams((current) => {
+                            const next = { ...current };
+                            delete next[peerId];
+                            return next;
+                        });
+                    };
+
+                    publishScreenTrack();
+                    return;
+                }
+
+                const incomingStream = streams[0] || new MediaStream([track]);
+
                 setRemoteStreams((current) => {
                     const existingStream = current[peerId];
-                    const incomingStream = streams[0];
-
                     if (!existingStream) {
                         return {
                             ...current,
-                            [peerId]:
-                                incomingStream || new MediaStream([track]),
+                            [peerId]: incomingStream,
                         };
                     }
 
@@ -276,23 +328,6 @@ export function useWebRTCCall({
                         [peerId]: existingStream,
                     };
                 });
-
-                const refreshRemoteStream = () => {
-                    setRemoteStreams((current) => {
-                        const currentStream = current[peerId];
-                        if (!currentStream) {
-                            return current;
-                        }
-
-                        return {
-                            ...current,
-                            [peerId]: currentStream,
-                        };
-                    });
-                };
-
-                track.addEventListener("unmute", refreshRemoteStream);
-                track.addEventListener("ended", refreshRemoteStream);
             };
 
             peer.onconnectionstatechange = () => {
@@ -461,28 +496,45 @@ export function useWebRTCCall({
 
         try {
             for (const [peerId, peer] of peersRef.current.entries()) {
-                const existingSender = screenSendersRef.current.get(peerId);
+                const existing = screenSendersRef.current.get(peerId);
 
-                if (existingSender) {
-                    // The screen m-line is already negotiated. Replacing null with
-                    // the new capture track requires no SDP renegotiation and works
-                    // reliably across Chrome, Firefox and Safari implementations.
-                    await existingSender.replaceTrack(screenTrack);
+                if (existing) {
+                    await existing.sender.replaceTrack(screenTrack);
+
+                    emitSignal(
+                        "call-screen-share",
+                        {
+                            callId: callIdRef.current,
+                            screenSharing: true,
+                            screenMid: existing.transceiver.mid,
+                        },
+                        peerId
+                    );
                     continue;
                 }
 
-                // Only the first share needs a new sender and SDP negotiation.
-                const screenSender = peer.addTrack(screenTrack, displayStream);
-                screenSendersRef.current.set(peerId, screenSender);
-
                 if (peer.signalingState !== "stable") {
                     throw new Error(
-                        `Cannot negotiate screen sharing while peer ${peerId} is ${peer.signalingState}`
+                        `Cannot start screen sharing while peer ${peerId} is ${peer.signalingState}`
                     );
+                }
+
+                const sender = peer.addTrack(screenTrack, displayStream);
+                const transceiver = peer
+                    .getTransceivers()
+                    .find((item) => item.sender === sender);
+
+                if (!transceiver) {
+                    throw new Error("Could not create screen-share transceiver");
                 }
 
                 const offer = await peer.createOffer();
                 await peer.setLocalDescription(offer);
+
+                screenSendersRef.current.set(peerId, {
+                    sender,
+                    transceiver,
+                });
 
                 emitSignal(
                     "call-offer",
@@ -490,6 +542,17 @@ export function useWebRTCCall({
                         callId: callIdRef.current,
                         type: peer.localDescription.type,
                         sdp: peer.localDescription.sdp,
+                        screenMid: transceiver.mid,
+                    },
+                    peerId
+                );
+
+                emitSignal(
+                    "call-screen-share",
+                    {
+                        callId: callIdRef.current,
+                        screenSharing: true,
+                        screenMid: transceiver.mid,
                     },
                     peerId
                 );
@@ -574,6 +637,15 @@ export function useWebRTCCall({
 
             try {
                 const peerId = payload.callerId;
+
+                if (payload.screenMid) {
+                    remoteScreenMidsRef.current.set(
+                        peerId,
+                        payload.screenMid
+                    );
+                    remoteScreenActiveRef.current.set(peerId, true);
+                }
+
                 const peer = createPeer(peerId, payload.callId);
                 if (!peer) {
                     return;
@@ -651,6 +723,38 @@ export function useWebRTCCall({
             }
         };
 
+        const onScreenShare = (payload) => {
+            if (!isOurCall(payload) || payload.callerId === currentUserId) {
+                return;
+            }
+
+            const peerId = payload.callerId;
+
+            if (payload.screenMid) {
+                remoteScreenMidsRef.current.set(peerId, payload.screenMid);
+            }
+
+            const active = payload.screenSharing === true;
+            remoteScreenActiveRef.current.set(peerId, active);
+
+            if (!active) {
+                setRemoteScreenStreams((current) => {
+                    const next = { ...current };
+                    delete next[peerId];
+                    return next;
+                });
+                return;
+            }
+
+            const track = remoteScreenTracksRef.current.get(peerId);
+            if (track && track.readyState === "live") {
+                setRemoteScreenStreams((current) => ({
+                    ...current,
+                    [peerId]: new MediaStream([track]),
+                }));
+            }
+        };
+
         const onReject = (payload) => {
             if (isOurCall(payload)) {
                 resetCall();
@@ -668,6 +772,7 @@ export function useWebRTCCall({
         socket.on("call-offer", onOffer);
         socket.on("call-answer", onAnswer);
         socket.on("call-ice-candidate", onIceCandidate);
+        socket.on("call-screen-share", onScreenShare);
         socket.on("call-reject", onReject);
         socket.on("call-end", onEnd);
 
@@ -677,6 +782,7 @@ export function useWebRTCCall({
             socket.off("call-offer", onOffer);
             socket.off("call-answer", onAnswer);
             socket.off("call-ice-candidate", onIceCandidate);
+            socket.off("call-screen-share", onScreenShare);
             socket.off("call-reject", onReject);
             socket.off("call-end", onEnd);
         };
@@ -705,6 +811,7 @@ export function useWebRTCCall({
         incomingCall,
         localStream,
         remoteStreams,
+        remoteScreenStreams,
         callType,
         isMuted,
         isCameraOff,
