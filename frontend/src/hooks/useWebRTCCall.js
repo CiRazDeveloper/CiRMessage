@@ -123,52 +123,20 @@ export function useWebRTCCall({
         }
 
         screenTrack.onended = null;
-        screenTrack.stop();
         screenTrackRef.current = null;
 
-        const cameraTrack = localStreamRef.current?.getVideoTracks()[0] || null;
-
-        for (const [peerId, peer] of peersRef.current.entries()) {
-            const screenSender = screenSendersRef.current.get(peerId);
-
-            if (screenSender) {
-                try {
-                    peer.removeTrack(screenSender);
-                } catch (error) {
-                    console.warn("Could not remove screen sender:", error);
-                }
-                screenSendersRef.current.delete(peerId);
-            } else {
-                const videoSender = peer
-                    .getSenders()
-                    .find((sender) => sender.track === screenTrack);
-
-                if (videoSender) {
-                    await videoSender.replaceTrack(cameraTrack);
-                }
+        for (const sender of screenSendersRef.current.values()) {
+            try {
+                await sender.replaceTrack(null);
+            } catch (error) {
+                console.error("Could not stop screen sender:", error);
             }
-
-            if (peer.signalingState !== "stable") {
-                continue;
-            }
-
-            const offer = await peer.createOffer();
-            await peer.setLocalDescription(offer);
-
-            emitSignal(
-                "call-offer",
-                {
-                    callId: callIdRef.current,
-                    type: peer.localDescription.type,
-                    sdp: peer.localDescription.sdp,
-                },
-                peerId
-            );
         }
 
+        screenTrack.stop();
         setScreenStream(null);
         setIsScreenSharing(false);
-    }, [emitSignal]);
+    }, []);
 
     const resetCall = useCallback(() => {
         for (const peer of peersRef.current.values()) {
@@ -199,6 +167,7 @@ export function useWebRTCCall({
         setIsMuted(false);
         setIsCameraOff(false);
         setIsScreenSharing(false);
+        setScreenStream(null);
     }, []);
 
     const endCall = useCallback(
@@ -490,37 +459,54 @@ export function useWebRTCCall({
             return;
         }
 
+        try {
+            for (const [peerId, peer] of peersRef.current.entries()) {
+                const existingSender = screenSendersRef.current.get(peerId);
+
+                if (existingSender) {
+                    // The screen m-line is already negotiated. Replacing null with
+                    // the new capture track requires no SDP renegotiation and works
+                    // reliably across Chrome, Firefox and Safari implementations.
+                    await existingSender.replaceTrack(screenTrack);
+                    continue;
+                }
+
+                // Only the first share needs a new sender and SDP negotiation.
+                const screenSender = peer.addTrack(screenTrack, displayStream);
+                screenSendersRef.current.set(peerId, screenSender);
+
+                if (peer.signalingState !== "stable") {
+                    throw new Error(
+                        `Cannot negotiate screen sharing while peer ${peerId} is ${peer.signalingState}`
+                    );
+                }
+
+                const offer = await peer.createOffer();
+                await peer.setLocalDescription(offer);
+
+                emitSignal(
+                    "call-offer",
+                    {
+                        callId: callIdRef.current,
+                        type: peer.localDescription.type,
+                        sdp: peer.localDescription.sdp,
+                    },
+                    peerId
+                );
+            }
+        } catch (error) {
+            screenTrack.stop();
+            setScreenStream(null);
+            throw error;
+        }
+
         screenTrackRef.current = screenTrack;
         setScreenStream(displayStream);
-
-        for (const [peerId, peer] of peersRef.current.entries()) {
-            // Always use a fresh sender/transceiver for each screen-share session.
-            // Reusing a stopped/recvonly transceiver is inconsistent across browsers.
-            const screenSender = peer.addTrack(screenTrack, displayStream);
-            screenSendersRef.current.set(peerId, screenSender);
-
-            if (peer.signalingState !== "stable") {
-                continue;
-            }
-
-            const offer = await peer.createOffer();
-            await peer.setLocalDescription(offer);
-
-            emitSignal(
-                "call-offer",
-                {
-                    callId: callIdRef.current,
-                    type: peer.localDescription.type,
-                    sdp: peer.localDescription.sdp,
-                },
-                peerId
-            );
-        }
+        setIsScreenSharing(true);
 
         screenTrack.onended = () => {
             stopScreenShare().catch(console.error);
         };
-        setIsScreenSharing(true);
     }, [emitSignal, stopScreenShare]);
 
     useEffect(() => {
