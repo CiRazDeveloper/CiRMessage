@@ -35,6 +35,14 @@ const messageSchema = new mongoose.Schema(
             type: String,
         },
 
+        gifUrl: {
+            type: String,
+        },
+
+        gifId: {
+            type: String,
+        },
+
         delivered: {
             type: Boolean,
             default: false,
