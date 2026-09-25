@@ -612,6 +612,11 @@
     background-color: #000;
 }
 
+.message-gif {
+    min-width: 120px;
+    background: #0002;
+}
+
 .message p + .message-image,
 .message p + .message-video {
     margin-top: 8px;
@@ -1114,6 +1119,29 @@
     cursor: pointer;
 
     font-size: 20px;
+}
+
+.selected-gif-info > div {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.selected-gif-info img {
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+    border-radius: 9px;
+    object-fit: cover;
+    background: #000;
+}
+
+.selected-gif-info span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 
