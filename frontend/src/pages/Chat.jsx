@@ -1252,7 +1252,8 @@ function Chat() {
                         conversationRequestState ===
                             "waiting-for-reply" ||
                         (!messageText.trim() &&
-                            !selectedMedia)
+                            !selectedMedia &&
+                            !selectedGif)
                     }
                     aria-label="Send message"
                 >
