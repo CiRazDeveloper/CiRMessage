@@ -344,7 +344,7 @@ export const addGroupMember = async (req, res) => {
                 .status(STATUS_CODES.ERROR.WEB_FORBIDDEN)
                 .json({
                     message:
-                        "Only group admins can invite members",
+                        "Only group admins can add members",
                 });
         }
 
@@ -388,7 +388,7 @@ export const addGroupMember = async (req, res) => {
                 .status(STATUS_CODES.ERROR.WEB_FORBIDDEN)
                 .json({
                     message:
-                        "You can only invite users from your existing chats",
+                        "You can only add users from your existing chats",
                 });
         }
 
