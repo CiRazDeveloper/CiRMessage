@@ -258,6 +258,32 @@ function Chat() {
         }
     }
 
+    async function demoteGroupAdmin(memberId) {
+        setGroupActionBusy(`demote:${memberId}`);
+
+        try {
+            const response = await axiosInstance.post(
+                `/groups/${id}/admins/${memberId}/demote`
+            );
+
+            setLoadedGroup(response.data);
+
+            showNotification(
+                "Admin demoted to Member",
+                "success",
+                { dismiss: "automatic" }
+            );
+        } catch (error) {
+            showNotification(
+                error.response?.data?.message ||
+                    "Could not demote admin",
+                "error"
+            );
+        } finally {
+            setGroupActionBusy("");
+        }
+    }
+
     async function removeGroupMember(member) {
         const memberId = member?._id?.toString();
         if (!memberId) {
@@ -1221,6 +1247,29 @@ function Chat() {
                                                                 `promote:${memberId}`
                                                                     ? "Promoting..."
                                                                     : "Make admin"}
+                                                            </button>
+                                                        )}
+
+                                                    {!isCreator &&
+                                                        isAdmin &&
+                                                        currentUserIsGroupOwner && (
+                                                            <button
+                                                                type="button"
+                                                                disabled={
+                                                                    Boolean(
+                                                                        groupActionBusy
+                                                                    )
+                                                                }
+                                                                onClick={() =>
+                                                                    demoteGroupAdmin(
+                                                                        memberId
+                                                                    )
+                                                                }
+                                                            >
+                                                                {groupActionBusy ===
+                                                                `demote:${memberId}`
+                                                                    ? "Demoting..."
+                                                                    : "Demote"}
                                                             </button>
                                                         )}
 
