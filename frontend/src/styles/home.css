@@ -419,80 +419,6 @@
     background-color: #ffffff1a;
 }
 
-.group-leave-button {
-    margin-left: auto;
-    flex-shrink: 0;
-    border: 1px solid #ef444466;
-    border-radius: 8px;
-    padding: 7px 10px;
-    background: #ef444418;
-    color: #fecaca;
-    font: inherit;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.group-leave-button:hover {
-    background: #ef4444;
-    border-color: #ef4444;
-    color: #fff;
-}
-
-.leave-group-modal {
-    width: min(390px, 100%);
-    padding: 22px;
-    border: 1px solid #ffffff18;
-    border-radius: 16px;
-    background: var(--private-card-background-color);
-    color: var(--private-text-color);
-    box-shadow: 0 20px 60px #0008;
-}
-
-.leave-group-modal h2 {
-    margin: 0 0 10px;
-}
-
-.leave-group-modal p {
-    margin: 0;
-    line-height: 1.5;
-    opacity: 0.88;
-}
-
-.leave-group-modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 20px;
-}
-
-.leave-group-modal-actions button {
-    border: none;
-    border-radius: 9px;
-    padding: 10px 14px;
-    color: #fff;
-    font: inherit;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.leave-group-modal-actions button:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
-}
-
-.leave-group-cancel-button {
-    background: #ffffff18;
-}
-
-.leave-group-confirm-button {
-    background: #dc2626;
-}
-
-.leave-group-confirm-button:hover:not(:disabled) {
-    background: #ef4444;
-}
-
 .chats-user-card:hover {
     background-color: var(--private-button-hover-color);
 }
@@ -560,6 +486,7 @@
     flex-direction: column;
     justify-content: center;
 
+    flex: 1;
     min-width: 0;
 }
 
@@ -711,22 +638,6 @@
 
 /* MOBILE */
 @media (max-width: 768px) {
-    .group-leave-button {
-        padding: 8px 10px;
-        font-size: 12px;
-    }
-
-    .leave-group-modal {
-        width: calc(100vw - 28px);
-        padding: 20px;
-        box-sizing: border-box;
-    }
-
-    .leave-group-modal-actions {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-    }
-
     /* LEFT SIDEBAR */
     .brand {
         display: none;
