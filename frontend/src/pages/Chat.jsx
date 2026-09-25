@@ -20,6 +20,7 @@ import { useWebRTCCall } from "../hooks/useWebRTCCall.js";
 import CallPanel, {
     CallControlButton,
 } from "../components/CallPanel.jsx";
+import GifPicker from "../components/GifPicker.jsx";
 
 function Chat() {
     const navigate = useNavigate();
@@ -47,7 +48,12 @@ function Chat() {
     const [messages, setMessages] = useState([]);
     const [messageText, setMessageText] = useState("");
     const [selectedMedia, setSelectedMedia] = useState(null);
+    const [attachmentMenuOpen, setAttachmentMenuOpen] = useState(false);
+    const [gifPickerOpen, setGifPickerOpen] = useState(false);
+    const [isPreparingGif, setIsPreparingGif] = useState(false);
     const messagesEndRef = useRef(null);
+    const mediaInputRef = useRef(null);
+    const gifInputRef = useRef(null);
     const messageInputRef = useRef(null);
     const deliveredMessageIdsRef = useRef(new Set());
     const latestSeenAtRef = useRef(null);
@@ -468,6 +474,77 @@ function Chat() {
     useEffect(() => {
         scrollToBottom();
     }, [messages, scrollToBottom]);
+
+    function handleSelectedFile(file, inputElement = null) {
+        if (!file) {
+            setSelectedMedia(null);
+            return;
+        }
+
+        if (file.size > getMaxMediaSize()) {
+            setSelectedMedia(null);
+
+            if (inputElement) {
+                inputElement.value = "";
+            }
+
+            showNotification(
+                `Media files must be ${getMaxMediaSize() / (1024 * 1024)} MB or smaller`,
+                "error"
+            );
+            return;
+        }
+
+        setSelectedMedia(file);
+        setAttachmentMenuOpen(false);
+    }
+
+    async function handleGifSelected(gif) {
+        if (!gif?.downloadUrl || isPreparingGif) {
+            return;
+        }
+
+        setIsPreparingGif(true);
+
+        try {
+            const response = await fetch(gif.downloadUrl);
+
+            if (!response.ok) {
+                throw new Error(
+                    `Could not download GIF (${response.status})`
+                );
+            }
+
+            const blob = await response.blob();
+
+            if (blob.size > getMaxMediaSize()) {
+                throw new Error("GIF is too large");
+            }
+
+            const file = new File(
+                [blob],
+                `${gif.id || "gif"}.gif`,
+                {
+                    type:
+                        blob.type === "image/gif"
+                            ? blob.type
+                            : "image/gif",
+                }
+            );
+
+            setSelectedMedia(file);
+            setGifPickerOpen(false);
+            setAttachmentMenuOpen(false);
+        } catch (error) {
+            console.error("Could not prepare GIF:", error);
+            showNotification(
+                "Could not prepare that GIF. Please choose another one.",
+                "error"
+            );
+        } finally {
+            setIsPreparingGif(false);
+        }
+    }
 
     // SEND MESSAGE
     async function handleSendMessage(event) {
@@ -949,7 +1026,11 @@ function Chat() {
 
             {selectedMedia && (
                 <div className="selected-media-info">
-                    <span>{selectedMedia.name}</span>
+                    <span>
+                        {selectedMedia.type === "image/gif"
+                            ? `GIF · ${selectedMedia.name}`
+                            : selectedMedia.name}
+                    </span>
 
                     <button
                         type="button"
@@ -981,17 +1062,90 @@ function Chat() {
             )}
 
             <form className="chat-input-area" onSubmit={handleSendMessage}>
-                <label
-                    className={`chat-media-button ${
-                        conversationRequestState === "waiting-for-reply"
-                            ? "disabled"
-                            : ""
-                    }`}
-                >
-                    +
+                <div className="chat-attachment-control">
+                    <button
+                        type="button"
+                        className={`chat-media-button ${
+                            conversationRequestState === "waiting-for-reply"
+                                ? "disabled"
+                                : ""
+                        }`}
+                        disabled={
+                            conversationRequestState ===
+                            "waiting-for-reply"
+                        }
+                        aria-label="Add attachment"
+                        aria-expanded={attachmentMenuOpen}
+                        onClick={() =>
+                            setAttachmentMenuOpen((open) => !open)
+                        }
+                    >
+                        +
+                    </button>
+
+                    {attachmentMenuOpen && (
+                        <div
+                            className="chat-attachment-menu"
+                            role="menu"
+                            aria-label="Attachment options"
+                        >
+                            <button
+                                type="button"
+                                role="menuitem"
+                                onClick={() => {
+                                    setAttachmentMenuOpen(false);
+                                    mediaInputRef.current?.click();
+                                }}
+                            >
+                                <span className="chat-attachment-menu-icon">
+                                    ▣
+                                </span>
+                                <span>
+                                    <strong>Media</strong>
+                                    <small>Photo or video</small>
+                                </span>
+                            </button>
+
+                            <button
+                                type="button"
+                                role="menuitem"
+                                onClick={() => {
+                                    setAttachmentMenuOpen(false);
+                                    setGifPickerOpen(true);
+                                }}
+                            >
+                                <span className="chat-attachment-menu-icon chat-attachment-gif-icon">
+                                    GIF
+                                </span>
+                                <span>
+                                    <strong>GIF</strong>
+                                    <small>Search or choose one</small>
+                                </span>
+                            </button>
+                        </div>
+                    )}
+
                     <input
+                        ref={mediaInputRef}
                         type="file"
                         accept="image/*,video/*"
+                        hidden
+                        disabled={
+                            conversationRequestState ===
+                            "waiting-for-reply"
+                        }
+                        onChange={(event) => {
+                            handleSelectedFile(
+                                event.target.files?.[0] || null,
+                                event.target
+                            );
+                        }}
+                    />
+
+                    <input
+                        ref={gifInputRef}
+                        type="file"
+                        accept="image/gif,.gif"
                         hidden
                         disabled={
                             conversationRequestState ===
@@ -1001,25 +1155,23 @@ function Chat() {
                             const file =
                                 event.target.files?.[0] || null;
 
-                            if (!file) {
-                                setSelectedMedia(null);
-                                return;
-                            }
-
-                            if (file.size > getMaxMediaSize()) {
-                                setSelectedMedia(null);
+                            if (file && file.type !== "image/gif") {
                                 event.target.value = "";
                                 showNotification(
-                                    `Media files must be ${getMaxMediaSize() / (1024 * 1024)} MB or smaller`,
+                                    "Please choose a GIF file.",
                                     "error"
                                 );
                                 return;
                             }
 
-                            setSelectedMedia(file);
+                            handleSelectedFile(file, event.target);
+
+                            if (file) {
+                                setGifPickerOpen(false);
+                            }
                         }}
                     />
-                </label>
+                </div>
 
                 <div className="chat-message-input-wrapper">
                     <textarea
@@ -1098,6 +1250,19 @@ function Chat() {
                     />
                 </button>
             </form>
+
+            <GifPicker
+                open={gifPickerOpen}
+                onClose={() => setGifPickerOpen(false)}
+                onChooseLocalGif={() => gifInputRef.current?.click()}
+                onSelect={handleGifSelected}
+            />
+
+            {isPreparingGif && (
+                <div className="gif-preparing-toast" role="status">
+                    Preparing GIF...
+                </div>
+            )}
         </div>
     );
 }
