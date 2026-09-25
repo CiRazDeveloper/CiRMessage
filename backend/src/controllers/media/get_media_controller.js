@@ -276,10 +276,31 @@ export const getMessageMedia = async (req, res) => {
             message.receiverId?.toString() === userId;
 
         if (message.groupId) {
-            authorized = Boolean(await mod_group.exists({
-                _id: message.groupId,
-                members: req.user._id,
-            }));
+            const group = await mod_group
+                .findOne({
+                    _id: message.groupId,
+                    members: req.user._id,
+                })
+                .select("messageVisibility");
+
+            if (!group) {
+                authorized = false;
+            } else {
+                const visibilityEntry = (
+                    group.messageVisibility || []
+                ).find(
+                    (item) =>
+                        item.memberId?.toString() ===
+                        req.user._id.toString()
+                );
+
+                const visibleFrom =
+                    visibilityEntry?.visibleFrom || null;
+
+                authorized =
+                    !visibleFrom ||
+                    message.createdAt >= visibleFrom;
+            }
         }
 
         if (!authorized) {
