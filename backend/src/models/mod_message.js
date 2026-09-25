@@ -43,6 +43,11 @@ const messageSchema = new mongoose.Schema(
             type: String,
         },
 
+        systemType: {
+            type: String,
+            enum: ["member-left"],
+        },
+
         delivered: {
             type: Boolean,
             default: false,
