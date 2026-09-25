@@ -1422,7 +1422,7 @@ function Chat() {
                                     setLeaveGroupConfirmOpen(true)
                                 }
                             >
-                                Leave group
+                                Leave Group
                             </button>
                         </div>
                     </section>
