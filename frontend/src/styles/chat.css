@@ -273,6 +273,21 @@
     letter-spacing: 0.3px;
 }
 
+.group-role-owner {
+    background: #f59e0b26;
+    color: #fde68a;
+}
+
+.group-role-admin {
+    background: #3b82f626;
+    color: #bfdbfe;
+}
+
+.group-role-member {
+    background: #ffffff12;
+    color: #e5e7eb;
+}
+
 .group-member-actions {
     display: flex;
     align-items: center;
