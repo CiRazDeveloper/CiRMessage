@@ -18,14 +18,25 @@ const memberIdsFromRequest = (members, requesterId) => [
 const idOf = (value) =>
     value?._id?.toString() || value?.toString();
 
+const isGroupOwner = (group, userId) =>
+    idOf(group.createdBy) === userId.toString();
+
 const isGroupAdmin = (group, userId) => {
     const id = userId.toString();
 
     return (
-        idOf(group.createdBy) === id ||
+        isGroupOwner(group, userId) ||
         (group.admins || []).some(
             (adminId) => idOf(adminId) === id
         )
+    );
+};
+
+const isAdminId = (group, userId) => {
+    const id = userId.toString();
+
+    return (group.admins || []).some(
+        (adminId) => idOf(adminId) === id
     );
 };
 
@@ -427,7 +438,28 @@ export const removeGroupMember = async (req, res) => {
                 .status(STATUS_CODES.ERROR.WEB_FORBIDDEN)
                 .json({
                     message:
-                        "The group creator cannot be removed",
+                        "The group Owner cannot be removed",
+                });
+        }
+
+        const requesterIsOwner = isGroupOwner(
+            group,
+            req.user._id
+        );
+        const targetIsAdmin = isAdminId(
+            group,
+            memberId
+        );
+
+        if (
+            !requesterIsOwner &&
+            targetIsAdmin
+        ) {
+            return res
+                .status(STATUS_CODES.ERROR.WEB_FORBIDDEN)
+                .json({
+                    message:
+                        "Admins can only remove Members. Only the Owner can remove an Admin.",
                 });
         }
 
