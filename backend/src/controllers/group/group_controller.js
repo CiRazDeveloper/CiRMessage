@@ -15,6 +15,26 @@ const memberIdsFromRequest = (members, requesterId) => [
     ]),
 ];
 
+const idOf = (value) =>
+    value?._id?.toString() || value?.toString();
+
+const isGroupAdmin = (group, userId) => {
+    const id = userId.toString();
+
+    return (
+        idOf(group.createdBy) === id ||
+        (group.admins || []).some(
+            (adminId) => idOf(adminId) === id
+        )
+    );
+};
+
+const populateGroup = (query) =>
+    query
+        .populate("members", "-password")
+        .populate("createdBy", "-password")
+        .populate("admins", "-password");
+
 export const createGroup = async (req, res) => {
     try {
         const {
@@ -113,12 +133,15 @@ export const createGroup = async (req, res) => {
             name: trimmedName,
             members: memberIds,
             createdBy: req.user._id,
+            admins: [req.user._id],
         });
 
         return res.status(STATUS_CODES.INFO.WEB_CREATED)
-            .json(await mod_group.findById(group._id)
-                .populate("members", "-password")
-                .populate("createdBy", "-password"));
+            .json(
+                await populateGroup(
+                    mod_group.findById(group._id)
+                )
+            );
     } catch (error) {
         console.error("Error in createGroup:", error);
         return res.status(STATUS_CODES.ERROR.SERVER_INTERNAL_ERROR)
@@ -128,9 +151,11 @@ export const createGroup = async (req, res) => {
 
 export const listGroups = async (req, res) => {
     try {
-        const groups = await mod_group.find({
-            members: req.user._id,
-        }).populate("members", "-password").sort({ updatedAt: -1 });
+        const groups = await populateGroup(
+            mod_group.find({
+                members: req.user._id,
+            })
+        ).sort({ updatedAt: -1 });
 
         return res.status(STATUS_CODES.INFO.WEB_OK).json(groups);
     } catch (error) {
@@ -142,10 +167,12 @@ export const listGroups = async (req, res) => {
 
 export const loadGroup = async (req, res) => {
     try {
-        const group = await mod_group.findOne({
-            _id: req.params.id,
-            members: req.user._id,
-        }).populate("members", "-password").populate("createdBy", "-password");
+        const group = await populateGroup(
+            mod_group.findOne({
+                _id: req.params.id,
+                members: req.user._id,
+            })
+        );
 
         if (!group) {
             return res.status(STATUS_CODES.ERROR.WEB_NOT_FOUND)
@@ -171,20 +198,10 @@ export const leaveGroup = async (req, res) => {
                 .json({ message: "Invalid group id" });
         }
 
-        const group = await mod_group.findOneAndUpdate(
-            {
-                _id: groupId,
-                members: userId,
-            },
-            {
-                $pull: {
-                    members: userId,
-                },
-            },
-            {
-                new: true,
-            }
-        );
+        const group = await mod_group.findOne({
+            _id: groupId,
+            members: userId,
+        });
 
         if (!group) {
             return res
@@ -194,6 +211,59 @@ export const leaveGroup = async (req, res) => {
                         "Group not found or you are no longer a member",
                 });
         }
+
+        const leavingId = userId.toString();
+
+        group.members = group.members.filter(
+            (memberId) =>
+                memberId.toString() !== leavingId
+        );
+        group.admins = (group.admins || []).filter(
+            (adminId) =>
+                adminId.toString() !== leavingId
+        );
+
+        if (group.members.length === 0) {
+            await mod_group.deleteOne({
+                _id: group._id,
+            });
+
+            return res
+                .status(STATUS_CODES.INFO.WEB_OK)
+                .json({
+                    message: "You left the group",
+                    groupId: group._id,
+                });
+        }
+
+        if (
+            group.createdBy.toString() ===
+            leavingId
+        ) {
+            const remainingAdmin = group.admins.find(
+                (adminId) =>
+                    group.members.some(
+                        (memberId) =>
+                            memberId.toString() ===
+                            adminId.toString()
+                    )
+            );
+
+            group.createdBy =
+                remainingAdmin || group.members[0];
+
+            if (
+                !group.admins.some(
+                    (adminId) =>
+                        adminId.toString() ===
+                        group.createdBy.toString()
+                )
+            ) {
+                group.admins.push(group.createdBy);
+            }
+        }
+
+        await group.save();
 
         return res
             .status(STATUS_CODES.INFO.WEB_OK)
@@ -211,6 +281,273 @@ export const leaveGroup = async (req, res) => {
             .json({
                 message: "Internal Server Error",
             });
+    }
+};
+
+export const addGroupMember = async (req, res) => {
+    try {
+        const { id: groupId } = req.params;
+        const { memberId } = req.body;
+
+        if (
+            !isValidId(groupId) ||
+            !isValidId(memberId)
+        ) {
+            return res
+                .status(STATUS_CODES.ERROR.WEB_BAD_REQUEST)
+                .json({ message: "Invalid group or member id" });
+        }
+
+        const group = await mod_group.findOne({
+            _id: groupId,
+            members: req.user._id,
+        });
+
+        if (!group) {
+            return res
+                .status(STATUS_CODES.ERROR.WEB_NOT_FOUND)
+                .json({ message: "Group not found" });
+        }
+
+        if (!isGroupAdmin(group, req.user._id)) {
+            return res
+                .status(STATUS_CODES.ERROR.WEB_FORBIDDEN)
+                .json({
+                    message:
+                        "Only group admins can invite members",
+                });
+        }
+
+        if (
+            group.members.some(
+                (id) => id.toString() === memberId
+            )
+        ) {
+            return res
+                .status(STATUS_CODES.ERROR.WEB_CONFLICT)
+                .json({
+                    message: "User is already in this group",
+                });
+        }
+
+        const userExists = await mod_user.exists({
+            _id: memberId,
+        });
+
+        if (!userExists) {
+            return res
+                .status(STATUS_CODES.ERROR.WEB_NOT_FOUND)
+                .json({ message: "User not found" });
+        }
+
+        const hasDirectChat = await mod_message.exists({
+            $or: [
+                {
+                    senderId: req.user._id,
+                    receiverId: memberId,
+                },
+                {
+                    senderId: memberId,
+                    receiverId: req.user._id,
+                },
+            ],
+        });
+
+        if (!hasDirectChat) {
+            return res
+                .status(STATUS_CODES.ERROR.WEB_FORBIDDEN)
+                .json({
+                    message:
+                        "You can only invite users from your existing chats",
+                });
+        }
+
+        group.members.push(memberId);
+        await group.save();
+
+        return res
+            .status(STATUS_CODES.INFO.WEB_OK)
+            .json(
+                await populateGroup(
+                    mod_group.findById(group._id)
+                )
+            );
+    } catch (error) {
+        console.error("Error in addGroupMember:", error);
+
+        return res
+            .status(
+                STATUS_CODES.ERROR.SERVER_INTERNAL_ERROR
+            )
+            .json({ message: "Internal Server Error" });
+    }
+};
+
+export const removeGroupMember = async (req, res) => {
+    try {
+        const {
+            id: groupId,
+            memberId,
+        } = req.params;
+
+        if (
+            !isValidId(groupId) ||
+            !isValidId(memberId)
+        ) {
+            return res
+                .status(STATUS_CODES.ERROR.WEB_BAD_REQUEST)
+                .json({ message: "Invalid group or member id" });
+        }
+
+        const group = await mod_group.findOne({
+            _id: groupId,
+            members: req.user._id,
+        });
+
+        if (!group) {
+            return res
+                .status(STATUS_CODES.ERROR.WEB_NOT_FOUND)
+                .json({ message: "Group not found" });
+        }
+
+        if (!isGroupAdmin(group, req.user._id)) {
+            return res
+                .status(STATUS_CODES.ERROR.WEB_FORBIDDEN)
+                .json({
+                    message:
+                        "Only group admins can remove members",
+                });
+        }
+
+        if (
+            group.createdBy.toString() ===
+            memberId
+        ) {
+            return res
+                .status(STATUS_CODES.ERROR.WEB_FORBIDDEN)
+                .json({
+                    message:
+                        "The group creator cannot be removed",
+                });
+        }
+
+        if (
+            !group.members.some(
+                (id) => id.toString() === memberId
+            )
+        ) {
+            return res
+                .status(STATUS_CODES.ERROR.WEB_NOT_FOUND)
+                .json({
+                    message: "User is not a group member",
+                });
+        }
+
+        group.members = group.members.filter(
+            (id) => id.toString() !== memberId
+        );
+        group.admins = (group.admins || []).filter(
+            (id) => id.toString() !== memberId
+        );
+
+        await group.save();
+
+        return res
+            .status(STATUS_CODES.INFO.WEB_OK)
+            .json(
+                await populateGroup(
+                    mod_group.findById(group._id)
+                )
+            );
+    } catch (error) {
+        console.error(
+            "Error in removeGroupMember:",
+            error
+        );
+
+        return res
+            .status(
+                STATUS_CODES.ERROR.SERVER_INTERNAL_ERROR
+            )
+            .json({ message: "Internal Server Error" });
+    }
+};
+
+export const promoteGroupAdmin = async (req, res) => {
+    try {
+        const {
+            id: groupId,
+            memberId,
+        } = req.params;
+
+        if (
+            !isValidId(groupId) ||
+            !isValidId(memberId)
+        ) {
+            return res
+                .status(STATUS_CODES.ERROR.WEB_BAD_REQUEST)
+                .json({ message: "Invalid group or member id" });
+        }
+
+        const group = await mod_group.findOne({
+            _id: groupId,
+            members: req.user._id,
+        });
+
+        if (!group) {
+            return res
+                .status(STATUS_CODES.ERROR.WEB_NOT_FOUND)
+                .json({ message: "Group not found" });
+        }
+
+        if (!isGroupAdmin(group, req.user._id)) {
+            return res
+                .status(STATUS_CODES.ERROR.WEB_FORBIDDEN)
+                .json({
+                    message:
+                        "Only group admins can promote members",
+                });
+        }
+
+        if (
+            !group.members.some(
+                (id) => id.toString() === memberId
+            )
+        ) {
+            return res
+                .status(STATUS_CODES.ERROR.WEB_NOT_FOUND)
+                .json({
+                    message: "User is not a group member",
+                });
+        }
+
+        if (
+            !group.admins.some(
+                (id) => id.toString() === memberId
+            )
+        ) {
+            group.admins.push(memberId);
+            await group.save();
+        }
+
+        return res
+            .status(STATUS_CODES.INFO.WEB_OK)
+            .json(
+                await populateGroup(
+                    mod_group.findById(group._id)
+                )
+            );
+    } catch (error) {
+        console.error(
+            "Error in promoteGroupAdmin:",
+            error
+        );
+
+        return res
+            .status(
+                STATUS_CODES.ERROR.SERVER_INTERNAL_ERROR
+            )
+            .json({ message: "Internal Server Error" });
     }
 };
 
