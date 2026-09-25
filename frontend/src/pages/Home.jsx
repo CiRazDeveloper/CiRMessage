@@ -577,7 +577,7 @@ function Home() {
                             className="create-group-button"
                             onClick={openGroupModal}
                         >
-                            New group
+                            New Group
                         </button>
                     </div>
 
