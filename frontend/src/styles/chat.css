@@ -408,6 +408,12 @@
     opacity: 0.75;
 }
 
+.add-member-history-options {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
 .add-member-history-option {
     display: flex;
     align-items: flex-start;
@@ -417,6 +423,11 @@
     border-radius: 12px;
     background: #ffffff0a;
     cursor: pointer;
+}
+
+.add-member-history-option:has(input:checked) {
+    border-color: #ffffff45;
+    background: #ffffff14;
 }
 
 .add-member-history-option input {
