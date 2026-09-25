@@ -115,22 +115,37 @@
     opacity: 0.7;
 }
 
-.chat-group-members-button {
+.chat-group-info-button {
     width: fit-content;
     border: none;
-    padding: 0;
+    padding: 2px 4px;
+    margin: -2px -4px;
+    border-radius: 7px;
     background: transparent;
     color: var(--private-text-color);
     font: inherit;
-    font-size: 13px;
     text-align: left;
-    opacity: 0.7;
     cursor: pointer;
 }
 
-.chat-group-members-button:hover {
+.chat-group-info-button > span {
+    font-size: 13px;
+    opacity: 0.7;
+}
+
+.chat-group-info-button:hover,
+.chat-group-info-button:focus-visible {
+    background: #ffffff0d;
+}
+
+.chat-group-info-button:hover > span,
+.chat-group-info-button:focus-visible > span {
     opacity: 1;
-    text-decoration: underline;
+}
+
+.chat-group-info-button:focus-visible {
+    outline: 2px solid #ffffff55;
+    outline-offset: 2px;
 }
 
 .group-members-backdrop {
