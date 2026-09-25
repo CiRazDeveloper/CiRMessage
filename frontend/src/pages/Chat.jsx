@@ -127,6 +127,10 @@ function Chat() {
             .filter(Boolean),
     ]);
 
+    const currentUserIsGroupOwner =
+        isGroup &&
+        creatorId === currentUserId;
+
     const currentUserIsGroupAdmin =
         isGroup &&
         adminIds.has(currentUserId);
@@ -1167,14 +1171,20 @@ function Chat() {
                                                 </strong>
 
                                                 {isCreator && (
-                                                    <span className="group-role-badge">
-                                                        Creator
+                                                    <span className="group-role-badge group-role-owner">
+                                                        Owner
                                                     </span>
                                                 )}
 
                                                 {!isCreator && isAdmin && (
-                                                    <span className="group-role-badge">
+                                                    <span className="group-role-badge group-role-admin">
                                                         Admin
+                                                    </span>
+                                                )}
+
+                                                {!isCreator && !isAdmin && (
+                                                    <span className="group-role-badge group-role-member">
+                                                        Member
                                                     </span>
                                                 )}
                                             </div>
@@ -1189,48 +1199,51 @@ function Chat() {
                                         {currentUserIsGroupAdmin &&
                                             !isMe && (
                                                 <div className="group-member-actions">
-                                                    {!isAdmin && (
-                                                        <button
-                                                            type="button"
-                                                            disabled={
-                                                                Boolean(
-                                                                    groupActionBusy
-                                                                )
-                                                            }
-                                                            onClick={() =>
-                                                                promoteGroupMember(
-                                                                    memberId
-                                                                )
-                                                            }
-                                                        >
-                                                            {groupActionBusy ===
-                                                            `promote:${memberId}`
-                                                                ? "Promoting..."
-                                                                : "Make admin"}
-                                                        </button>
-                                                    )}
+                                                    {!isCreator &&
+                                                        !isAdmin && (
+                                                            <button
+                                                                type="button"
+                                                                disabled={
+                                                                    Boolean(
+                                                                        groupActionBusy
+                                                                    )
+                                                                }
+                                                                onClick={() =>
+                                                                    promoteGroupMember(
+                                                                        memberId
+                                                                    )
+                                                                }
+                                                            >
+                                                                {groupActionBusy ===
+                                                                `promote:${memberId}`
+                                                                    ? "Promoting..."
+                                                                    : "Make admin"}
+                                                            </button>
+                                                        )}
 
-                                                    {!isCreator && (
-                                                        <button
-                                                            type="button"
-                                                            className="group-member-remove"
-                                                            disabled={
-                                                                Boolean(
-                                                                    groupActionBusy
-                                                                )
-                                                            }
-                                                            onClick={() =>
-                                                                removeGroupMember(
-                                                                    member
-                                                                )
-                                                            }
-                                                        >
-                                                            {groupActionBusy ===
-                                                            `remove:${memberId}`
-                                                                ? "Removing..."
-                                                                : "Remove"}
-                                                        </button>
-                                                    )}
+                                                    {!isCreator &&
+                                                        (!isAdmin ||
+                                                            currentUserIsGroupOwner) && (
+                                                            <button
+                                                                type="button"
+                                                                className="group-member-remove"
+                                                                disabled={
+                                                                    Boolean(
+                                                                        groupActionBusy
+                                                                    )
+                                                                }
+                                                                onClick={() =>
+                                                                    removeGroupMember(
+                                                                        member
+                                                                    )
+                                                                }
+                                                            >
+                                                                {groupActionBusy ===
+                                                                `remove:${memberId}`
+                                                                    ? "Removing..."
+                                                                    : "Remove"}
+                                                            </button>
+                                                        )}
                                                 </div>
                                             )}
                                     </div>
