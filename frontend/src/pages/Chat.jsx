@@ -1055,27 +1055,30 @@ function Chat() {
                         )}
                     </div>
 
-                    <div className="chat-header-info">
-                        <strong>
-                            {isGroup
-                                ? group?.name || "Group"
-                                : user?.displayName || "Chat"}
-                        </strong>
-
-                        {isGroup ? (
-                            <button
-                                type="button"
-                                className="chat-group-members-button"
-                                onClick={openGroupMembers}
-                            >
+                    {isGroup ? (
+                        <button
+                            type="button"
+                            className="chat-header-info chat-group-info-button"
+                            onClick={openGroupMembers}
+                            aria-label={`View members of ${group?.name || "group"}`}
+                        >
+                            <strong>
+                                {group?.name || "Group"}
+                            </strong>
+                            <span>
                                 {group?.members?.length || 0} members
-                            </button>
-                        ) : (
+                            </span>
+                        </button>
+                    ) : (
+                        <div className="chat-header-info">
+                            <strong>
+                                {user?.displayName || "Chat"}
+                            </strong>
                             <span>
                                 @{user?.username}
                             </span>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
 
                 {call.status === "idle" && !call.incomingCall && (
