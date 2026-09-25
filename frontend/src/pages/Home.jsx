@@ -47,6 +47,8 @@ function Home() {
     const [groupName, setGroupName] = useState("");
     const [selectedMemberIds, setSelectedMemberIds] = useState([]);
     const [creatingGroup, setCreatingGroup] = useState(false);
+    const [groupToLeave, setGroupToLeave] = useState(null);
+    const [leavingGroup, setLeavingGroup] = useState(false);
     // --- SETTINGS ---
     const [isOn, setIsOn] = useState(false);
     
@@ -260,6 +262,60 @@ function Home() {
             );
         } finally {
             setCreatingGroup(false);
+        }
+    }
+
+    function requestLeaveGroup(event, group) {
+        event.stopPropagation();
+        setGroupToLeave(group);
+    }
+
+    async function confirmLeaveGroup() {
+        if (!groupToLeave?._id || leavingGroup) {
+            return;
+        }
+
+        setLeavingGroup(true);
+
+        try {
+            const response = await axiosInstance.post(
+                `/groups/${groupToLeave._id}/leave`
+            );
+
+            setChats((previous) =>
+                previous.filter(
+                    (chat) =>
+                        chat._id?.toString() !==
+                        groupToLeave._id.toString()
+                )
+            );
+
+            setUnreadCounts((previous) => {
+                const next = { ...previous };
+                delete next[groupToLeave._id];
+                return next;
+            });
+
+            showNotification(
+                response.data?.message ||
+                    `You left ${groupToLeave.name}`,
+                "success",
+                {
+                    dismiss: "automatic",
+                }
+            );
+
+            setGroupToLeave(null);
+        } catch (error) {
+            console.error("Could not leave group:", error);
+
+            showNotification(
+                error.response?.data?.message ||
+                    "Could not leave the group",
+                "error"
+            );
+        } finally {
+            setLeavingGroup(false);
         }
     }
 
@@ -646,6 +702,21 @@ function Home() {
                                         )}
                                     </span>
                                 )}
+
+                                {isGroup && (
+                                    <button
+                                        type="button"
+                                        className="group-leave-button"
+                                        onClick={(event) =>
+                                            requestLeaveGroup(
+                                                event,
+                                                chat
+                                            )
+                                        }
+                                    >
+                                        Leave
+                                    </button>
+                                )}
                             </div>
                             );
                         })}
@@ -719,6 +790,66 @@ function Home() {
                         </div>
                     </div>
                 </section>
+            )}
+
+            {groupToLeave && (
+                <div
+                    className="group-modal-backdrop"
+                    onMouseDown={(event) => {
+                        if (
+                            event.target ===
+                                event.currentTarget &&
+                            !leavingGroup
+                        ) {
+                            setGroupToLeave(null);
+                        }
+                    }}
+                >
+                    <div
+                        className="leave-group-modal"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="leave-group-title"
+                    >
+                        <h2 id="leave-group-title">
+                            Leave group?
+                        </h2>
+
+                        <p>
+                            Are you sure you want to leave{" "}
+                            <strong>
+                                {groupToLeave.name}
+                            </strong>
+                            ? You will no longer be able to
+                            view or send messages in this
+                            group.
+                        </p>
+
+                        <div className="leave-group-modal-actions">
+                            <button
+                                type="button"
+                                className="leave-group-cancel-button"
+                                disabled={leavingGroup}
+                                onClick={() =>
+                                    setGroupToLeave(null)
+                                }
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="button"
+                                className="leave-group-confirm-button"
+                                disabled={leavingGroup}
+                                onClick={confirmLeaveGroup}
+                            >
+                                {leavingGroup
+                                    ? "Leaving..."
+                                    : "Leave"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {groupModalOpen && (
