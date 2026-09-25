@@ -24,7 +24,6 @@
     "@capacitor/android": "^8.5.2",
     "@capacitor/cli": "^8.5.2",
     "@capacitor/core": "^8.5.2",
-    "@giphy/react-native-sdk": "^6.0.3",
     "multer": "^2.3.0",
     "mysql2": "^3.24.2",
     "sharp": "^0.35.4"
