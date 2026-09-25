@@ -115,6 +115,266 @@
     opacity: 0.7;
 }
 
+.chat-group-info-button {
+    width: fit-content;
+    border: none;
+    padding: 2px 4px;
+    margin: -2px -4px;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--private-text-color);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.chat-group-info-button > span {
+    font-size: 13px;
+    opacity: 0.7;
+}
+
+.chat-group-info-button:hover,
+.chat-group-info-button:focus-visible {
+    background: #ffffff0d;
+}
+
+.chat-group-info-button:hover > span,
+.chat-group-info-button:focus-visible > span {
+    opacity: 1;
+}
+
+.chat-group-info-button:focus-visible {
+    outline: 2px solid #ffffff55;
+    outline-offset: 2px;
+}
+
+.group-members-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 2400;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: #0009;
+    backdrop-filter: blur(4px);
+}
+
+.group-members-panel {
+    width: min(580px, 100%);
+    max-height: min(760px, calc(100dvh - 40px));
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid #ffffff18;
+    border-radius: 18px;
+    background: var(--private-card-background-color);
+    color: var(--private-text-color);
+    box-shadow: 0 24px 70px #000a;
+}
+
+.group-members-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 16px;
+    border-bottom: 1px solid #ffffff14;
+}
+
+.group-members-header > div {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.group-members-header strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 17px;
+}
+
+.group-members-header span {
+    font-size: 12px;
+    opacity: 0.65;
+}
+
+.group-members-close {
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    display: grid;
+    place-items: center;
+    border: none;
+    border-radius: 50%;
+    padding: 0;
+    background: #ffffff10;
+    color: var(--private-text-color);
+    font: inherit;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.group-members-list,
+.group-invite-list {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.group-members-list {
+    overflow-y: auto;
+    padding: 12px 14px;
+}
+
+.group-member-row,
+.group-invite-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    padding: 9px;
+    border-radius: 11px;
+    background: #ffffff0a;
+}
+
+.group-member-avatar {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: #ffffff14;
+    font-weight: 700;
+}
+
+.group-member-details {
+    min-width: 0;
+    flex: 1;
+}
+
+.group-member-details > div {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+}
+
+.group-member-details strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.group-member-details small,
+.group-invite-row small {
+    display: block;
+    margin-top: 2px;
+    font-size: 12px;
+    opacity: 0.65;
+}
+
+.group-role-badge {
+    flex-shrink: 0;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: #ffffff16;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.group-role-owner {
+    background: #f59e0b26;
+    color: #fde68a;
+}
+
+.group-role-admin {
+    background: #3b82f626;
+    color: #bfdbfe;
+}
+
+.group-role-member {
+    background: #ffffff12;
+    color: #e5e7eb;
+}
+
+.group-member-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.group-member-actions button,
+.group-invite-row button {
+    border: none;
+    border-radius: 8px;
+    padding: 7px 9px;
+    background: #ffffff16;
+    color: var(--private-text-color);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.group-member-actions button:hover,
+.group-invite-row button:hover {
+    background: #ffffff25;
+}
+
+.group-member-actions button:disabled,
+.group-invite-row button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.group-member-actions .group-member-remove {
+    background: #ef44441e;
+    color: #fecaca;
+}
+
+.group-member-actions .group-member-remove:hover {
+    background: #ef4444;
+    color: #fff;
+}
+
+.group-invite-section {
+    border-top: 1px solid #ffffff14;
+    padding: 14px;
+    overflow-y: auto;
+}
+
+.group-invite-heading {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 10px;
+}
+
+.group-invite-heading span,
+.group-invite-empty {
+    font-size: 12px;
+    opacity: 0.65;
+}
+
+.group-invite-row > div {
+    min-width: 0;
+    flex: 1;
+}
+
+.group-invite-row > div strong {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .chat-header-call-actions {
     margin-left: auto;
     display: flex;
@@ -1186,6 +1446,44 @@
 
     .chat-header-call-actions {
         gap: 4px;
+    }
+
+    .group-members-backdrop {
+        align-items: end;
+        padding: 0;
+    }
+
+    .group-members-panel {
+        width: 100%;
+        max-height: 86dvh;
+        border-left: none;
+        border-right: none;
+        border-bottom: none;
+        border-radius: 20px 20px 0 0;
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .group-member-row {
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .group-member-details {
+        padding-top: 2px;
+    }
+
+    .group-member-actions {
+        width: 100%;
+        padding-left: 50px;
+    }
+
+    .group-member-actions button {
+        flex: 1;
+        min-height: 38px;
+    }
+
+    .group-invite-row button {
+        min-height: 38px;
     }
 
     .chat-header-call-button {
