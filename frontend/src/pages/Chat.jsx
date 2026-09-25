@@ -38,8 +38,10 @@ function Chat() {
         routeUser && loadedUser
             ? { ...loadedUser, ...routeUser }
             : routeUser || loadedUser;
-    const [loadedGroup, setLoadedGroup] = useState(null);
-    const group = location.state?.group || loadedGroup;
+    const [loadedGroup, setLoadedGroup] = useState(
+        location.state?.group || null
+    );
+    const group = loadedGroup;
     const isGroup = Boolean(location.state?.group) ||
         location.pathname.startsWith("/group/");
     
@@ -51,6 +53,9 @@ function Chat() {
     const [selectedGif, setSelectedGif] = useState(null);
     const [attachmentMenuOpen, setAttachmentMenuOpen] = useState(false);
     const [gifPickerOpen, setGifPickerOpen] = useState(false);
+    const [groupMembersOpen, setGroupMembersOpen] = useState(false);
+    const [inviteCandidates, setInviteCandidates] = useState([]);
+    const [groupActionBusy, setGroupActionBusy] = useState("");
     const messagesEndRef = useRef(null);
     const mediaInputRef = useRef(null);
     const gifInputRef = useRef(null);
@@ -75,29 +80,227 @@ function Chat() {
         });
     }, []);
 
+    const refreshGroup = useCallback(async () => {
+        if (!isGroup || !id) {
+            return null;
+        }
+
+        const response = await axiosInstance.get(
+            `/groups/${id}`
+        );
+
+        setLoadedGroup(response.data);
+        return response.data;
+    }, [id, isGroup]);
+
     useEffect(() => {
-        if (!isGroup || group) {
+        if (!isGroup) {
             return;
         }
 
-        async function loadGroup() {
-            try {
-                const response = await axiosInstance.get(
-                    `/groups/${id}`
-                );
-                setLoadedGroup(response.data);
-            } catch (error) {
-                console.error("Could not load group:", error);
-                showNotification(
-                    error.response?.data?.message ||
-                        "Could not load group",
-                    "error"
-                );
-            }
+        refreshGroup().catch((error) => {
+            console.error("Could not load group:", error);
+            showNotification(
+                error.response?.data?.message ||
+                    "Could not load group",
+                "error"
+            );
+        });
+    }, [isGroup, refreshGroup, showNotification]);
+
+    const currentUserId =
+        currentUser?._id?.toString() || "";
+
+    const creatorId =
+        group?.createdBy?._id?.toString() ||
+        group?.createdBy?.toString() ||
+        "";
+
+    const adminIds = new Set([
+        creatorId,
+        ...(group?.admins || [])
+            .map(
+                (admin) =>
+                    admin?._id?.toString() ||
+                    admin?.toString()
+            )
+            .filter(Boolean),
+    ]);
+
+    const currentUserIsGroupAdmin =
+        isGroup &&
+        adminIds.has(currentUserId);
+
+    const isAdminMember = (member) =>
+        adminIds.has(
+            member?._id?.toString() ||
+                member?.toString()
+        );
+
+    async function loadInviteCandidates(
+        currentGroup = group
+    ) {
+        if (!currentUserIsGroupAdmin) {
+            setInviteCandidates([]);
+            return;
         }
 
-        loadGroup();
-    }, [id, isGroup, group, showNotification]);
+        try {
+            const response = await axiosInstance.get(
+                "/messages/chats"
+            );
+
+            const memberIds = new Set(
+                (currentGroup?.members || []).map(
+                    (member) =>
+                        member?._id?.toString() ||
+                        member?.toString()
+                )
+            );
+
+            const candidates = response.data
+                .filter(
+                    (chat) =>
+                        chat.type !== "group" &&
+                        !memberIds.has(
+                            (
+                                chat.user?._id ||
+                                chat._id
+                            )?.toString()
+                        )
+                )
+                .map((chat) => chat.user || chat);
+
+            setInviteCandidates(candidates);
+        } catch (error) {
+            console.error(
+                "Could not load invite candidates:",
+                error
+            );
+            setInviteCandidates([]);
+        }
+    }
+
+    async function openGroupMembers() {
+        if (!isGroup) {
+            return;
+        }
+
+        setGroupMembersOpen(true);
+
+        try {
+            const freshGroup = await refreshGroup();
+
+            if (currentUserIsGroupAdmin) {
+                await loadInviteCandidates(
+                    freshGroup || group
+                );
+            }
+        } catch {
+            // refreshGroup already surfaces load errors elsewhere.
+        }
+    }
+
+    async function inviteGroupMember(memberId) {
+        setGroupActionBusy(`invite:${memberId}`);
+
+        try {
+            const response = await axiosInstance.post(
+                `/groups/${id}/members`,
+                { memberId }
+            );
+
+            setLoadedGroup(response.data);
+            setInviteCandidates((current) =>
+                current.filter(
+                    (user) =>
+                        user._id?.toString() !==
+                        memberId.toString()
+                )
+            );
+
+            showNotification(
+                "Member added to the group",
+                "success",
+                { dismiss: "automatic" }
+            );
+        } catch (error) {
+            showNotification(
+                error.response?.data?.message ||
+                    "Could not add member",
+                "error"
+            );
+        } finally {
+            setGroupActionBusy("");
+        }
+    }
+
+    async function promoteGroupMember(memberId) {
+        setGroupActionBusy(`promote:${memberId}`);
+
+        try {
+            const response = await axiosInstance.post(
+                `/groups/${id}/admins/${memberId}/promote`
+            );
+
+            setLoadedGroup(response.data);
+
+            showNotification(
+                "Member promoted to group admin",
+                "success",
+                { dismiss: "automatic" }
+            );
+        } catch (error) {
+            showNotification(
+                error.response?.data?.message ||
+                    "Could not promote member",
+                "error"
+            );
+        } finally {
+            setGroupActionBusy("");
+        }
+    }
+
+    async function removeGroupMember(member) {
+        const memberId = member?._id?.toString();
+        if (!memberId) {
+            return;
+        }
+
+        const confirmed = window.confirm(
+            `Remove ${member.displayName || member.username || "this member"} from the group?`
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        setGroupActionBusy(`remove:${memberId}`);
+
+        try {
+            const response = await axiosInstance.post(
+                `/groups/${id}/members/${memberId}/remove`
+            );
+
+            setLoadedGroup(response.data);
+
+            showNotification(
+                "Member removed from the group",
+                "success",
+                { dismiss: "automatic" }
+            );
+
+            await loadInviteCandidates(response.data);
+        } catch (error) {
+            showNotification(
+                error.response?.data?.message ||
+                    "Could not remove member",
+                "error"
+            );
+        } finally {
+            setGroupActionBusy("");
+        }
+    }
 
 
     // --- DIRECT CHAT USER ---
@@ -862,11 +1065,19 @@ function Chat() {
                                 : user?.displayName || "Chat"}
                         </strong>
 
-                        <span>
-                            {isGroup
-                                ? `${group?.members?.length || 0} members`
-                                : `@${user?.username}`}
-                        </span>
+                        {isGroup ? (
+                            <button
+                                type="button"
+                                className="chat-group-members-button"
+                                onClick={openGroupMembers}
+                            >
+                                {group?.members?.length || 0} members
+                            </button>
+                        ) : (
+                            <span>
+                                @${user?.username}
+                            </span>
+                        )}
                     </div>
                 </div>
 
@@ -892,6 +1103,210 @@ function Chat() {
                 call={call}
                 participantNames={call.participantNames}
             />
+
+            {isGroup && groupMembersOpen && (
+                <div
+                    className="group-members-backdrop"
+                    onMouseDown={(event) => {
+                        if (event.target === event.currentTarget) {
+                            setGroupMembersOpen(false);
+                        }
+                    }}
+                >
+                    <section
+                        className="group-members-panel"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Group members"
+                    >
+                        <div className="group-members-header">
+                            <div>
+                                <strong>{group?.name || "Group"}</strong>
+                                <span>
+                                    {group?.members?.length || 0} members
+                                </span>
+                            </div>
+
+                            <button
+                                type="button"
+                                className="group-members-close"
+                                onClick={() =>
+                                    setGroupMembersOpen(false)
+                                }
+                                aria-label="Close group members"
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        <div className="group-members-list">
+                            {(group?.members || []).map((member) => {
+                                const memberId =
+                                    member?._id?.toString() ||
+                                    member?.toString();
+                                const isCreator =
+                                    memberId === creatorId;
+                                const isAdmin =
+                                    isAdminMember(member);
+                                const isMe =
+                                    memberId === currentUserId;
+
+                                return (
+                                    <div
+                                        className="group-member-row"
+                                        key={memberId}
+                                    >
+                                        <div className="group-member-avatar">
+                                            {(member.displayName ||
+                                                member.username ||
+                                                "?")
+                                                .charAt(0)
+                                                .toUpperCase()}
+                                        </div>
+
+                                        <div className="group-member-details">
+                                            <div>
+                                                <strong>
+                                                    {member.displayName ||
+                                                        member.username ||
+                                                        "Member"}
+                                                    {isMe ? " (You)" : ""}
+                                                </strong>
+
+                                                {isCreator && (
+                                                    <span className="group-role-badge">
+                                                        Creator
+                                                    </span>
+                                                )}
+
+                                                {!isCreator && isAdmin && (
+                                                    <span className="group-role-badge">
+                                                        Admin
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {member.username && (
+                                                <small>
+                                                    @{member.username}
+                                                </small>
+                                            )}
+                                        </div>
+
+                                        {currentUserIsGroupAdmin &&
+                                            !isMe && (
+                                                <div className="group-member-actions">
+                                                    {!isAdmin && (
+                                                        <button
+                                                            type="button"
+                                                            disabled={
+                                                                Boolean(
+                                                                    groupActionBusy
+                                                                )
+                                                            }
+                                                            onClick={() =>
+                                                                promoteGroupMember(
+                                                                    memberId
+                                                                )
+                                                            }
+                                                        >
+                                                            {groupActionBusy ===
+                                                            `promote:${memberId}`
+                                                                ? "Promoting..."
+                                                                : "Make admin"}
+                                                        </button>
+                                                    )}
+
+                                                    {!isCreator && (
+                                                        <button
+                                                            type="button"
+                                                            className="group-member-remove"
+                                                            disabled={
+                                                                Boolean(
+                                                                    groupActionBusy
+                                                                )
+                                                            }
+                                                            onClick={() =>
+                                                                removeGroupMember(
+                                                                    member
+                                                                )
+                                                            }
+                                                        >
+                                                            {groupActionBusy ===
+                                                            `remove:${memberId}`
+                                                                ? "Removing..."
+                                                                : "Remove"}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {currentUserIsGroupAdmin && (
+                            <div className="group-invite-section">
+                                <div className="group-invite-heading">
+                                    <strong>Invite members</strong>
+                                    <span>
+                                        Users from your existing chats
+                                    </span>
+                                </div>
+
+                                {inviteCandidates.length === 0 ? (
+                                    <div className="group-invite-empty">
+                                        No available users to invite.
+                                    </div>
+                                ) : (
+                                    <div className="group-invite-list">
+                                        {inviteCandidates.map((candidate) => {
+                                            const candidateId =
+                                                candidate._id?.toString();
+
+                                            return (
+                                                <div
+                                                    className="group-invite-row"
+                                                    key={candidateId}
+                                                >
+                                                    <div>
+                                                        <strong>
+                                                            {candidate.displayName ||
+                                                                candidate.username}
+                                                        </strong>
+                                                        <small>
+                                                            @{candidate.username}
+                                                        </small>
+                                                    </div>
+
+                                                    <button
+                                                        type="button"
+                                                        disabled={
+                                                            Boolean(
+                                                                groupActionBusy
+                                                            )
+                                                        }
+                                                        onClick={() =>
+                                                            inviteGroupMember(
+                                                                candidateId
+                                                            )
+                                                        }
+                                                    >
+                                                        {groupActionBusy ===
+                                                        `invite:${candidateId}`
+                                                            ? "Inviting..."
+                                                            : "Invite"}
+                                                    </button>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </section>
+                </div>
+            )}
 
             <div className="chat-messages">
                 {messages.map((message, index) => {
