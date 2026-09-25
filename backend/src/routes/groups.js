@@ -10,6 +10,7 @@ import {
     addGroupMember,
     removeGroupMember,
     promoteGroupAdmin,
+    demoteGroupAdmin,
 } from "../controllers/group/group_controller.js";
 
 const router = express.Router();
@@ -24,5 +25,6 @@ router.post("/:id/leave", leaveGroup);
 router.post("/:id/members", addGroupMember);
 router.post("/:id/members/:memberId/remove", removeGroupMember);
 router.post("/:id/admins/:memberId/promote", promoteGroupAdmin);
+router.post("/:id/admins/:memberId/demote", demoteGroupAdmin);
 
 export default router;
