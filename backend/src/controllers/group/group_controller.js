@@ -40,6 +40,15 @@ const isAdminId = (group, userId) => {
     );
 };
 
+const getVisibleFromForMember = (group, userId) => {
+    const entry = (group.messageVisibility || []).find(
+        (item) =>
+            item.memberId?.toString() === userId.toString()
+    );
+
+    return entry?.visibleFrom || null;
+};
+
 const populateGroup = (query) =>
     query
         .populate("members", "-password")
@@ -145,6 +154,10 @@ export const createGroup = async (req, res) => {
             members: memberIds,
             createdBy: req.user._id,
             admins: [req.user._id],
+            messageVisibility: memberIds.map((memberId) => ({
+                memberId,
+                visibleFrom: null,
+            })),
         });
 
         return res.status(STATUS_CODES.INFO.WEB_CREATED)
@@ -233,6 +246,12 @@ export const leaveGroup = async (req, res) => {
             (adminId) =>
                 adminId.toString() !== leavingId
         );
+        group.messageVisibility = (
+            group.messageVisibility || []
+        ).filter(
+            (item) =>
+                item.memberId?.toString() !== leavingId
+        );
 
         if (group.members.length === 0) {
             await mod_group.deleteOne({
@@ -298,7 +317,7 @@ export const leaveGroup = async (req, res) => {
 export const addGroupMember = async (req, res) => {
     try {
         const { id: groupId } = req.params;
-        const { memberId } = req.body;
+        const { memberId, canSeeHistory } = req.body;
 
         if (
             !isValidId(groupId) ||
@@ -374,6 +393,21 @@ export const addGroupMember = async (req, res) => {
         }
 
         group.members.push(memberId);
+
+        group.messageVisibility = (
+            group.messageVisibility || []
+        ).filter(
+            (item) =>
+                item.memberId?.toString() !==
+                memberId.toString()
+        );
+
+        group.messageVisibility.push({
+            memberId,
+            visibleFrom:
+                canSeeHistory === true ? null : new Date(),
+        });
+
         await group.save();
 
         return res
@@ -480,6 +514,12 @@ export const removeGroupMember = async (req, res) => {
         );
         group.admins = (group.admins || []).filter(
             (id) => id.toString() !== memberId
+        );
+        group.messageVisibility = (
+            group.messageVisibility || []
+        ).filter(
+            (item) =>
+                item.memberId?.toString() !== memberId
         );
 
         await group.save();
@@ -684,16 +724,30 @@ export const getGroupMessages = async (req, res) => {
         const group = await mod_group.findOne({
             _id: req.params.id,
             members: req.user._id,
-        }).select("_id");
+        }).select("_id messageVisibility");
 
         if (!group) {
             return res.status(STATUS_CODES.ERROR.WEB_FORBIDDEN)
                 .json({ message: "Group not found or access denied" });
         }
 
+        const visibleFrom = getVisibleFromForMember(
+            group,
+            req.user._id
+        );
+
+        const messageFilter = {
+            groupId: group._id,
+            ...(visibleFrom && {
+                createdAt: {
+                    $gte: visibleFrom,
+                },
+            }),
+        };
+
         await mod_message.updateMany(
             {
-                groupId: group._id,
+                ...messageFilter,
                 senderId: { $ne: req.user._id },
                 readBy: { $ne: req.user._id },
             },
@@ -704,9 +758,9 @@ export const getGroupMessages = async (req, res) => {
             }
         );
 
-        const messages = await mod_message.find({
-            groupId: group._id,
-        })
+        const messages = await mod_message.find(
+            messageFilter
+        )
             .populate("senderId", "displayName username")
             .sort({ createdAt: 1 })
             .lean();
