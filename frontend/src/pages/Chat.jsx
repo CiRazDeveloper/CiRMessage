@@ -55,6 +55,9 @@ function Chat() {
     const [gifPickerOpen, setGifPickerOpen] = useState(false);
     const [groupMembersOpen, setGroupMembersOpen] = useState(false);
     const [inviteCandidates, setInviteCandidates] = useState([]);
+    const [memberToAdd, setMemberToAdd] = useState(null);
+    const [addMemberCanSeeHistory, setAddMemberCanSeeHistory] =
+        useState(false);
     const [groupActionBusy, setGroupActionBusy] = useState("");
     const messagesEndRef = useRef(null);
     const mediaInputRef = useRef(null);
@@ -198,13 +201,27 @@ function Chat() {
         }
     }
 
-    async function inviteGroupMember(memberId) {
-        setGroupActionBusy(`invite:${memberId}`);
+    function requestAddGroupMember(candidate) {
+        setMemberToAdd(candidate);
+        setAddMemberCanSeeHistory(false);
+    }
+
+    async function addGroupMember() {
+        const memberId = memberToAdd?._id?.toString();
+
+        if (!memberId) {
+            return;
+        }
+
+        setGroupActionBusy(`add:${memberId}`);
 
         try {
             const response = await axiosInstance.post(
                 `/groups/${id}/members`,
-                { memberId }
+                {
+                    memberId,
+                    canSeeHistory: addMemberCanSeeHistory,
+                }
             );
 
             setLoadedGroup(response.data);
@@ -212,9 +229,11 @@ function Chat() {
                 current.filter(
                     (user) =>
                         user._id?.toString() !==
-                        memberId.toString()
+                        memberId
                 )
             );
+            setMemberToAdd(null);
+            setAddMemberCanSeeHistory(false);
 
             showNotification(
                 "Member added to the group",
@@ -1306,7 +1325,7 @@ function Chat() {
                         {currentUserIsGroupAdmin && (
                             <div className="group-invite-section">
                                 <div className="group-invite-heading">
-                                    <strong>Invite members</strong>
+                                    <strong>Add members</strong>
                                     <span>
                                         Users from your existing chats
                                     </span>
@@ -1362,6 +1381,87 @@ function Chat() {
                                 )}
                             </div>
                         )}
+                    </section>
+                </div>
+            )}
+
+            {memberToAdd && (
+                <div
+                    className="add-member-history-backdrop"
+                    onMouseDown={(event) => {
+                        if (
+                            event.target === event.currentTarget &&
+                            !groupActionBusy
+                        ) {
+                            setMemberToAdd(null);
+                        }
+                    }}
+                >
+                    <section
+                        className="add-member-history-modal"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="add-member-history-title"
+                    >
+                        <h2 id="add-member-history-title">
+                            Add{" "}
+                            {memberToAdd.displayName ||
+                                memberToAdd.username ||
+                                "member"}?
+                        </h2>
+
+                        <p>
+                            Choose whether this person can see
+                            messages that were sent before they
+                            joined the group.
+                        </p>
+
+                        <label className="add-member-history-option">
+                            <input
+                                type="checkbox"
+                                checked={addMemberCanSeeHistory}
+                                onChange={(event) =>
+                                    setAddMemberCanSeeHistory(
+                                        event.target.checked
+                                    )
+                                }
+                                disabled={Boolean(groupActionBusy)}
+                            />
+
+                            <span>
+                                <strong>
+                                    Show previous messages
+                                </strong>
+                                <small>
+                                    If disabled, their chat starts empty
+                                    and they only see messages sent after
+                                    they are added.
+                                </small>
+                            </span>
+                        </label>
+
+                        <div className="add-member-history-actions">
+                            <button
+                                type="button"
+                                disabled={Boolean(groupActionBusy)}
+                                onClick={() =>
+                                    setMemberToAdd(null)
+                                }
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="button"
+                                className="add-member-confirm-button"
+                                disabled={Boolean(groupActionBusy)}
+                                onClick={addGroupMember}
+                            >
+                                {groupActionBusy.startsWith("add:")
+                                    ? "Adding..."
+                                    : "Add"}
+                            </button>
+                        </div>
                     </section>
                 </div>
             )}
