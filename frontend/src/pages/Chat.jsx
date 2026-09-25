@@ -58,6 +58,9 @@ function Chat() {
     const [memberToAdd, setMemberToAdd] = useState(null);
     const [addMemberCanSeeHistory, setAddMemberCanSeeHistory] =
         useState(null);
+    const [leaveGroupConfirmOpen, setLeaveGroupConfirmOpen] =
+        useState(false);
+    const [leavingGroup, setLeavingGroup] = useState(false);
     const [groupActionBusy, setGroupActionBusy] = useState("");
     const messagesEndRef = useRef(null);
     const mediaInputRef = useRef(null);
@@ -341,6 +344,38 @@ function Chat() {
             );
         } finally {
             setGroupActionBusy("");
+        }
+    }
+
+    async function confirmLeaveGroup() {
+        if (!id || leavingGroup) {
+            return;
+        }
+
+        setLeavingGroup(true);
+
+        try {
+            const response = await axiosInstance.post(
+                `/groups/${id}/leave`
+            );
+
+            showNotification(
+                response.data?.message || "You left the group",
+                "success",
+                { dismiss: "automatic" }
+            );
+
+            setLeaveGroupConfirmOpen(false);
+            setGroupMembersOpen(false);
+            navigate("/home");
+        } catch (error) {
+            showNotification(
+                error.response?.data?.message ||
+                    "Could not leave the group",
+                "error"
+            );
+        } finally {
+            setLeavingGroup(false);
         }
     }
 
@@ -1378,6 +1413,18 @@ function Chat() {
                                 )}
                             </div>
                         )}
+
+                        <div className="group-leave-section">
+                            <button
+                                type="button"
+                                className="group-leave-panel-button"
+                                onClick={() =>
+                                    setLeaveGroupConfirmOpen(true)
+                                }
+                            >
+                                Leave group
+                            </button>
+                        </div>
                     </section>
                 </div>
             )}
@@ -1492,6 +1539,58 @@ function Chat() {
                 </div>
             )}
 
+            {leaveGroupConfirmOpen && (
+                <div
+                    className="group-leave-confirm-backdrop"
+                    onMouseDown={(event) => {
+                        if (
+                            event.target === event.currentTarget &&
+                            !leavingGroup
+                        ) {
+                            setLeaveGroupConfirmOpen(false);
+                        }
+                    }}
+                >
+                    <section
+                        className="group-leave-confirm-modal"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="group-leave-confirm-title"
+                    >
+                        <h2 id="group-leave-confirm-title">
+                            Leave group?
+                        </h2>
+                        <p>
+                            Are you sure you want to leave{" "}
+                            <strong>{group?.name || "this group"}</strong>?
+                            You will no longer be able to view or send
+                            messages in it.
+                        </p>
+
+                        <div className="group-leave-confirm-actions">
+                            <button
+                                type="button"
+                                disabled={leavingGroup}
+                                onClick={() =>
+                                    setLeaveGroupConfirmOpen(false)
+                                }
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="button"
+                                className="group-leave-confirm-button"
+                                disabled={leavingGroup}
+                                onClick={confirmLeaveGroup}
+                            >
+                                {leavingGroup ? "Leaving..." : "Leave"}
+                            </button>
+                        </div>
+                    </section>
+                </div>
+            )}
+
             <div className="chat-messages">
                 {messages.map((message, index) => {
                     const previousMessage =
@@ -1521,6 +1620,11 @@ function Chat() {
                                 </div>
                             )}
 
+                            {message.systemType ? (
+                                <div className="group-system-message">
+                                    {message.text}
+                                </div>
+                            ) : (
                             <div
                                 className={
                                     message.isMine
@@ -1613,6 +1717,7 @@ function Chat() {
                                     </span>
                                 )}
                             </div>
+                            )}
                         </div>
                     );
                 })}
