@@ -160,6 +160,60 @@ export const loadGroup = async (req, res) => {
     }
 };
 
+export const leaveGroup = async (req, res) => {
+    try {
+        const groupId = req.params.id;
+        const userId = req.user._id;
+
+        if (!isValidId(groupId)) {
+            return res
+                .status(STATUS_CODES.ERROR.WEB_BAD_REQUEST)
+                .json({ message: "Invalid group id" });
+        }
+
+        const group = await mod_group.findOneAndUpdate(
+            {
+                _id: groupId,
+                members: userId,
+            },
+            {
+                $pull: {
+                    members: userId,
+                },
+            },
+            {
+                new: true,
+            }
+        );
+
+        if (!group) {
+            return res
+                .status(STATUS_CODES.ERROR.WEB_NOT_FOUND)
+                .json({
+                    message:
+                        "Group not found or you are no longer a member",
+                });
+        }
+
+        return res
+            .status(STATUS_CODES.INFO.WEB_OK)
+            .json({
+                message: "You left the group",
+                groupId: group._id,
+            });
+    } catch (error) {
+        console.error("Error in leaveGroup:", error);
+
+        return res
+            .status(
+                STATUS_CODES.ERROR.SERVER_INTERNAL_ERROR
+            )
+            .json({
+                message: "Internal Server Error",
+            });
+    }
+};
+
 export const getGroupMessages = async (req, res) => {
     try {
         const group = await mod_group.findOne({
