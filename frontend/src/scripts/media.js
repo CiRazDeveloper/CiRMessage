@@ -54,6 +54,7 @@ function canvasToBlob(canvas, quality) {
 export async function prepareMediaForUpload(file) {
     if (
         !file.type.startsWith("image/") ||
+        file.type === "image/gif" ||
         file.size <= MAX_IMAGE_UPLOAD_BYTES
     ) {
         return file;
