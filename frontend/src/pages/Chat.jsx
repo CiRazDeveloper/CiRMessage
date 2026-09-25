@@ -57,7 +57,7 @@ function Chat() {
     const [inviteCandidates, setInviteCandidates] = useState([]);
     const [memberToAdd, setMemberToAdd] = useState(null);
     const [addMemberCanSeeHistory, setAddMemberCanSeeHistory] =
-        useState(false);
+        useState(null);
     const [groupActionBusy, setGroupActionBusy] = useState("");
     const messagesEndRef = useRef(null);
     const mediaInputRef = useRef(null);
@@ -203,7 +203,7 @@ function Chat() {
 
     function requestAddGroupMember(candidate) {
         setMemberToAdd(candidate);
-        setAddMemberCanSeeHistory(false);
+        setAddMemberCanSeeHistory(null);
     }
 
     async function addGroupMember() {
@@ -233,7 +233,7 @@ function Chat() {
                 )
             );
             setMemberToAdd(null);
-            setAddMemberCanSeeHistory(false);
+            setAddMemberCanSeeHistory(null);
 
             showNotification(
                 "Member added to the group",
@@ -1413,29 +1413,55 @@ function Chat() {
                             joined the group.
                         </p>
 
-                        <label className="add-member-history-option">
-                            <input
-                                type="checkbox"
-                                checked={addMemberCanSeeHistory}
-                                onChange={(event) =>
-                                    setAddMemberCanSeeHistory(
-                                        event.target.checked
-                                    )
-                                }
-                                disabled={Boolean(groupActionBusy)}
-                            />
+                        <div className="add-member-history-options">
+                            <label className="add-member-history-option">
+                                <input
+                                    type="radio"
+                                    name="group-history-access"
+                                    checked={
+                                        addMemberCanSeeHistory === false
+                                    }
+                                    onChange={() =>
+                                        setAddMemberCanSeeHistory(false)
+                                    }
+                                    disabled={Boolean(groupActionBusy)}
+                                />
 
-                            <span>
-                                <strong>
-                                    Show previous messages
-                                </strong>
-                                <small>
-                                    If disabled, their chat starts empty
-                                    and they only see messages sent after
-                                    they are added.
-                                </small>
-                            </span>
-                        </label>
+                                <span>
+                                    <strong>
+                                        Start with an empty chat
+                                    </strong>
+                                    <small>
+                                        They only see messages sent after
+                                        they are added.
+                                    </small>
+                                </span>
+                            </label>
+
+                            <label className="add-member-history-option">
+                                <input
+                                    type="radio"
+                                    name="group-history-access"
+                                    checked={
+                                        addMemberCanSeeHistory === true
+                                    }
+                                    onChange={() =>
+                                        setAddMemberCanSeeHistory(true)
+                                    }
+                                    disabled={Boolean(groupActionBusy)}
+                                />
+
+                                <span>
+                                    <strong>
+                                        Show previous messages
+                                    </strong>
+                                    <small>
+                                        They can read the group history
+                                        from before they joined.
+                                    </small>
+                                </span>
+                            </label>
+                        </div>
 
                         <div className="add-member-history-actions">
                             <button
@@ -1451,7 +1477,10 @@ function Chat() {
                             <button
                                 type="button"
                                 className="add-member-confirm-button"
-                                disabled={Boolean(groupActionBusy)}
+                                disabled={
+                                    Boolean(groupActionBusy) ||
+                                    addMemberCanSeeHistory === null
+                                }
                                 onClick={addGroupMember}
                             >
                                 {groupActionBusy.startsWith("add:")
