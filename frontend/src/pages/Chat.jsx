@@ -1075,7 +1075,7 @@ function Chat() {
                             </button>
                         ) : (
                             <span>
-                                @${user?.username}
+                                @{user?.username}
                             </span>
                         )}
                     </div>
