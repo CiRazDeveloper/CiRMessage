@@ -30,6 +30,20 @@ const groupSchema = new mongoose.Schema(
                 ref: "User",
             },
         ],
+
+        messageVisibility: [
+            {
+                memberId: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: "User",
+                    required: true,
+                },
+                visibleFrom: {
+                    type: Date,
+                    default: null,
+                },
+            },
+        ],
     },
     {
         timestamps: true,
