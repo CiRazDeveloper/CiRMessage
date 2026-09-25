@@ -1333,7 +1333,7 @@ function Chat() {
 
                                 {inviteCandidates.length === 0 ? (
                                     <div className="group-invite-empty">
-                                        No available users to invite.
+                                        No available users to add.
                                     </div>
                                 ) : (
                                     <div className="group-invite-list">
@@ -1364,15 +1364,12 @@ function Chat() {
                                                             )
                                                         }
                                                         onClick={() =>
-                                                            inviteGroupMember(
-                                                                candidateId
+                                                            requestAddGroupMember(
+                                                                candidate
                                                             )
                                                         }
                                                     >
-                                                        {groupActionBusy ===
-                                                        `invite:${candidateId}`
-                                                            ? "Inviting..."
-                                                            : "Invite"}
+                                                        Add
                                                     </button>
                                                 </div>
                                             );
