@@ -583,6 +583,102 @@ export const promoteGroupAdmin = async (req, res) => {
     }
 };
 
+export const demoteGroupAdmin = async (req, res) => {
+    try {
+        const {
+            id: groupId,
+            memberId,
+        } = req.params;
+
+        if (
+            !isValidId(groupId) ||
+            !isValidId(memberId)
+        ) {
+            return res
+                .status(STATUS_CODES.ERROR.WEB_BAD_REQUEST)
+                .json({ message: "Invalid group or member id" });
+        }
+
+        const group = await mod_group.findOne({
+            _id: groupId,
+            members: req.user._id,
+        });
+
+        if (!group) {
+            return res
+                .status(STATUS_CODES.ERROR.WEB_NOT_FOUND)
+                .json({ message: "Group not found" });
+        }
+
+        if (!isGroupOwner(group, req.user._id)) {
+            return res
+                .status(STATUS_CODES.ERROR.WEB_FORBIDDEN)
+                .json({
+                    message:
+                        "Only the Owner can demote an Admin",
+                });
+        }
+
+        if (
+            group.createdBy.toString() ===
+            memberId
+        ) {
+            return res
+                .status(STATUS_CODES.ERROR.WEB_FORBIDDEN)
+                .json({
+                    message:
+                        "The Owner cannot be demoted",
+                });
+        }
+
+        if (
+            !group.members.some(
+                (id) => id.toString() === memberId
+            )
+        ) {
+            return res
+                .status(STATUS_CODES.ERROR.WEB_NOT_FOUND)
+                .json({
+                    message: "User is not a group member",
+                });
+        }
+
+        if (!isAdminId(group, memberId)) {
+            return res
+                .status(STATUS_CODES.ERROR.WEB_CONFLICT)
+                .json({
+                    message:
+                        "This member is not an Admin",
+                });
+        }
+
+        group.admins = (group.admins || []).filter(
+            (id) => id.toString() !== memberId
+        );
+
+        await group.save();
+
+        return res
+            .status(STATUS_CODES.INFO.WEB_OK)
+            .json(
+                await populateGroup(
+                    mod_group.findById(group._id)
+                )
+            );
+    } catch (error) {
+        console.error(
+            "Error in demoteGroupAdmin:",
+            error
+        );
+
+        return res
+            .status(
+                STATUS_CODES.ERROR.SERVER_INTERNAL_ERROR
+            )
+            .json({ message: "Internal Server Error" });
+    }
+};
+
 export const getGroupMessages = async (req, res) => {
     try {
         const group = await mod_group.findOne({
