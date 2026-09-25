@@ -375,6 +375,102 @@
     white-space: nowrap;
 }
 
+.add-member-history-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 2600;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: #000a;
+    backdrop-filter: blur(4px);
+}
+
+.add-member-history-modal {
+    width: min(430px, 100%);
+    padding: 22px;
+    border: 1px solid #ffffff18;
+    border-radius: 18px;
+    background: var(--private-card-background-color);
+    color: var(--private-text-color);
+    box-shadow: 0 24px 70px #000a;
+}
+
+.add-member-history-modal h2 {
+    margin: 0 0 8px;
+    font-size: 19px;
+}
+
+.add-member-history-modal > p {
+    margin: 0 0 16px;
+    font-size: 13px;
+    line-height: 1.5;
+    opacity: 0.75;
+}
+
+.add-member-history-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    padding: 12px;
+    border: 1px solid #ffffff16;
+    border-radius: 12px;
+    background: #ffffff0a;
+    cursor: pointer;
+}
+
+.add-member-history-option input {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+    margin: 2px 0 0;
+    accent-color: var(--private-button-hover-color);
+}
+
+.add-member-history-option > span {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.add-member-history-option strong {
+    font-size: 14px;
+}
+
+.add-member-history-option small {
+    font-size: 12px;
+    line-height: 1.4;
+    opacity: 0.7;
+}
+
+.add-member-history-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 9px;
+    margin-top: 18px;
+}
+
+.add-member-history-actions button {
+    border: none;
+    border-radius: 9px;
+    padding: 9px 13px;
+    background: #ffffff14;
+    color: var(--private-text-color);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.add-member-history-actions button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.add-member-history-actions .add-member-confirm-button {
+    background: var(--private-button-hover-color);
+    color: #fff;
+}
+
 .chat-header-call-actions {
     margin-left: auto;
     display: flex;
@@ -1451,6 +1547,31 @@
     .group-members-backdrop {
         align-items: end;
         padding: 0;
+    }
+
+    .add-member-history-backdrop {
+        align-items: end;
+        padding: 0;
+    }
+
+    .add-member-history-modal {
+        width: 100%;
+        border-left: none;
+        border-right: none;
+        border-bottom: none;
+        border-radius: 20px 20px 0 0;
+        padding: 20px 18px
+            calc(20px + env(safe-area-inset-bottom));
+        box-sizing: border-box;
+    }
+
+    .add-member-history-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .add-member-history-actions button {
+        min-height: 42px;
     }
 
     .group-members-panel {
