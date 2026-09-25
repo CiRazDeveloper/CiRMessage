@@ -74,36 +74,42 @@ export const getActiveChats = async (req, res) => {
             .sort({ updatedAt: -1 })
             .lean();
 
-        const groupUnreadMessages = await mod_message.aggregate([
-            {
-                $match: {
-                    groupId: {
-                        $in: groups.map((group) => group._id),
-                    },
-                    senderId: {
-                        $ne: loggedInUserId,
-                    },
-                    readBy: {
-                        $ne: loggedInUserId,
-                    },
-                },
-            },
-            {
-                $group: {
-                    _id: "$groupId",
-                    unreadCount: {
-                        $sum: 1,
-                    },
-                },
-            },
-        ]);
-
         const groupUnreadCountMap = {};
 
-        groupUnreadMessages.forEach((entry) => {
-            groupUnreadCountMap[entry._id.toString()] =
-                entry.unreadCount;
-        });
+        await Promise.all(
+            groups.map(async (group) => {
+                const visibilityEntry = (
+                    group.messageVisibility || []
+                ).find(
+                    (item) =>
+                        item.memberId?.toString() ===
+                        loggedInUserId.toString()
+                );
+
+                const visibleFrom =
+                    visibilityEntry?.visibleFrom || null;
+
+                const unreadCount =
+                    await mod_message.countDocuments({
+                        groupId: group._id,
+                        senderId: {
+                            $ne: loggedInUserId,
+                        },
+                        readBy: {
+                            $ne: loggedInUserId,
+                        },
+                        ...(visibleFrom && {
+                            createdAt: {
+                                $gte: visibleFrom,
+                            },
+                        }),
+                    });
+
+                groupUnreadCountMap[
+                    group._id.toString()
+                ] = unreadCount;
+            })
+        );
 
         const groupChats = groups.map((group) => ({
             ...group,
