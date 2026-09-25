@@ -140,11 +140,6 @@ function Chat() {
     async function loadInviteCandidates(
         currentGroup = group
     ) {
-        if (!currentUserIsGroupAdmin) {
-            setInviteCandidates([]);
-            return;
-        }
-
         try {
             const response = await axiosInstance.get(
                 "/messages/chats"
@@ -191,11 +186,9 @@ function Chat() {
         try {
             const freshGroup = await refreshGroup();
 
-            if (currentUserIsGroupAdmin) {
-                await loadInviteCandidates(
-                    freshGroup || group
-                );
-            }
+            await loadInviteCandidates(
+                freshGroup || group
+            );
         } catch {
             // refreshGroup already surfaces load errors elsewhere.
         }
