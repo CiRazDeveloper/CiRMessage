@@ -9,6 +9,36 @@ import {
     postMessageMedia,
 } from "../media/post_media_controller.js";
 
+const validateGif = (gifUrl, gifId) => {
+    if (!gifUrl && !gifId) {
+        return null;
+    }
+
+    if (
+        typeof gifUrl !== "string" ||
+        typeof gifId !== "string" ||
+        !gifUrl.trim() ||
+        !gifId.trim()
+    ) {
+        return "Invalid GIF";
+    }
+
+    try {
+        const url = new URL(gifUrl);
+
+        if (
+            url.protocol !== "https:" ||
+            !/^(?:media\d*|i)\.giphy\.com$/i.test(url.hostname)
+        ) {
+            return "Invalid GIF source";
+        }
+    } catch {
+        return "Invalid GIF URL";
+    }
+
+    return null;
+};
+
 const validateText = (text) => {
     if (
         typeof text === "string" &&
@@ -81,6 +111,8 @@ const createMessage = async ({
     groupId,
     text,
     media,
+    gifUrl,
+    gifId,
 }) => {
     return mod_message.create({
         senderId,
@@ -93,6 +125,8 @@ const createMessage = async ({
         media: media?.mediaKey,
         mediaType: media?.mediaType,
         mediaMimeType: media?.mediaMimeType,
+        gifUrl: gifUrl?.trim() || undefined,
+        gifId: gifId?.trim() || undefined,
     });
 };
 
@@ -124,19 +158,20 @@ const emitNewGroupMessage = async (groupId, message) => {
 
 export const sendMessage = async (req, res) => {
     try {
-        const { text } = req.body;
+        const { text, gifUrl, gifId } = req.body;
         const { id: receiverId } = req.params;
         const senderId = req.user._id;
 
         const textError = validateText(text);
+        const gifError = validateGif(gifUrl, gifId);
 
-        if (textError) {
+        if (textError || gifError) {
             return res
                 .status(
                     STATUS_CODES.ERROR.WEB_BAD_REQUEST
                 )
                 .json({
-                    message: textError,
+                    message: textError || gifError,
                 });
         }
 
@@ -152,7 +187,18 @@ export const sendMessage = async (req, res) => {
                 receiverId,
             });
 
-        if (!text?.trim() && !media) {
+        if (media && gifUrl) {
+            return res
+                .status(
+                    STATUS_CODES.ERROR.WEB_BAD_REQUEST
+                )
+                .json({
+                    message:
+                        "Choose either uploaded media or a GIF",
+                });
+        }
+
+        if (!text?.trim() && !media && !gifUrl) {
             return res
                 .status(
                     STATUS_CODES.ERROR.WEB_BAD_REQUEST
@@ -168,6 +214,8 @@ export const sendMessage = async (req, res) => {
             receiverId,
             text,
             media,
+            gifUrl,
+            gifId,
         });
 
         emitNewMessage(receiverId, message);
@@ -211,14 +259,15 @@ export const sendMessage = async (req, res) => {
 
 export const sendGroupMessage = async (req, res) => {
     try {
-        const { text } = req.body;
+        const { text, gifUrl, gifId } = req.body;
         const { id: groupId } = req.params;
         const senderId = req.user._id;
         const textError = validateText(text);
+        const gifError = validateGif(gifUrl, gifId);
 
-        if (textError) {
+        if (textError || gifError) {
             return res.status(STATUS_CODES.ERROR.WEB_BAD_REQUEST)
-                .json({ message: textError });
+                .json({ message: textError || gifError });
         }
 
         const group = await mod_group.findOne({
@@ -237,7 +286,12 @@ export const sendGroupMessage = async (req, res) => {
             groupId,
         });
 
-        if (!text?.trim() && !media) {
+        if (media && gifUrl) {
+            return res.status(STATUS_CODES.ERROR.WEB_BAD_REQUEST)
+                .json({ message: "Choose either uploaded media or a GIF" });
+        }
+
+        if (!text?.trim() && !media && !gifUrl) {
             return res.status(STATUS_CODES.ERROR.WEB_BAD_REQUEST)
                 .json({ message: "Text or media is required" });
         }
@@ -247,6 +301,8 @@ export const sendGroupMessage = async (req, res) => {
             groupId,
             text,
             media,
+            gifUrl,
+            gifId,
         });
 
         await message.populate(
