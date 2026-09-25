@@ -48,9 +48,9 @@ function Chat() {
     const [messages, setMessages] = useState([]);
     const [messageText, setMessageText] = useState("");
     const [selectedMedia, setSelectedMedia] = useState(null);
+    const [selectedGif, setSelectedGif] = useState(null);
     const [attachmentMenuOpen, setAttachmentMenuOpen] = useState(false);
     const [gifPickerOpen, setGifPickerOpen] = useState(false);
-    const [isPreparingGif, setIsPreparingGif] = useState(false);
     const messagesEndRef = useRef(null);
     const mediaInputRef = useRef(null);
     const gifInputRef = useRef(null);
@@ -495,55 +495,29 @@ function Chat() {
             return;
         }
 
+        setSelectedGif(null);
         setSelectedMedia(file);
         setAttachmentMenuOpen(false);
     }
 
-    async function handleGifSelected(gif) {
-        if (!gif?.downloadUrl || isPreparingGif) {
+    function handleGifSelected(gif) {
+        if (!gif?.downloadUrl || !gif?.id) {
+            showNotification(
+                "Could not select that GIF. Please choose another one.",
+                "error"
+            );
             return;
         }
 
-        setIsPreparingGif(true);
-
-        try {
-            const response = await fetch(gif.downloadUrl);
-
-            if (!response.ok) {
-                throw new Error(
-                    `Could not download GIF (${response.status})`
-                );
-            }
-
-            const blob = await response.blob();
-
-            if (blob.size > getMaxMediaSize()) {
-                throw new Error("GIF is too large");
-            }
-
-            const file = new File(
-                [blob],
-                `${gif.id || "gif"}.gif`,
-                {
-                    type:
-                        blob.type === "image/gif"
-                            ? blob.type
-                            : "image/gif",
-                }
-            );
-
-            setSelectedMedia(file);
-            setGifPickerOpen(false);
-            setAttachmentMenuOpen(false);
-        } catch (error) {
-            console.error("Could not prepare GIF:", error);
-            showNotification(
-                "Could not prepare that GIF. Please choose another one.",
-                "error"
-            );
-        } finally {
-            setIsPreparingGif(false);
-        }
+        setSelectedMedia(null);
+        setSelectedGif({
+            id: gif.id,
+            title: gif.title || "GIF",
+            url: gif.downloadUrl,
+            previewUrl: gif.previewUrl || gif.downloadUrl,
+        });
+        setGifPickerOpen(false);
+        setAttachmentMenuOpen(false);
     }
 
     // SEND MESSAGE
@@ -552,10 +526,11 @@ function Chat() {
 
         if (
             !messageText.trim() &&
-            !selectedMedia
+            !selectedMedia &&
+            !selectedGif
         ) {
             showNotification(
-                "Enter a message or select a file",
+                "Enter a message or select media or a GIF",
                 "info"
             );
             return;
@@ -580,6 +555,17 @@ function Chat() {
                 formData.append(
                     "media",
                     mediaToUpload
+                );
+            }
+
+            if (selectedGif) {
+                formData.append(
+                    "gifUrl",
+                    selectedGif.url
+                );
+                formData.append(
+                    "gifId",
+                    selectedGif.id
                 );
             }
 
@@ -647,6 +633,7 @@ function Chat() {
 
             setMessageText("");
             setSelectedMedia(null);
+            setSelectedGif(null);
 
             if (messageInputRef.current) {
                 messageInputRef.current.style.height =
@@ -995,6 +982,16 @@ function Chat() {
                                                 onLoadedMetadata={scrollToBottom}
                                             />
                                         )}
+
+                                        {message.gifUrl && (
+                                            <img
+                                                src={message.gifUrl}
+                                                alt="GIF"
+                                                className="message-image message-gif"
+                                                loading="lazy"
+                                                onLoad={scrollToBottom}
+                                            />
+                                        )}
                                     </div>
 
                                     {message.isMine &&
@@ -1036,6 +1033,27 @@ function Chat() {
                         type="button"
                         onClick={() =>
                             setSelectedMedia(null)
+                        }
+                    >
+                        ×
+                    </button>
+                </div>
+            )}
+
+            {selectedGif && (
+                <div className="selected-media-info selected-gif-info">
+                    <div>
+                        <img
+                            src={selectedGif.previewUrl}
+                            alt={selectedGif.title}
+                        />
+                        <span>{selectedGif.title || "GIF"}</span>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            setSelectedGif(null)
                         }
                     >
                         ×
@@ -1241,7 +1259,8 @@ function Chat() {
                     <img
                         src={
                             messageText.trim() ||
-                            selectedMedia
+                            selectedMedia ||
+                            selectedGif
                                 ? "/arrow_up.png"
                                 : "/arrow_right.png"
                         }
@@ -1258,11 +1277,6 @@ function Chat() {
                 onSelect={handleGifSelected}
             />
 
-            {isPreparingGif && (
-                <div className="gif-preparing-toast" role="status">
-                    Preparing GIF...
-                </div>
-            )}
         </div>
     );
 }
