@@ -39,3 +39,16 @@ code, use a dedicated TURN credential rather than a sensitive server secret.
 
 Set `VITE_ICE_TRANSPORT_POLICY=relay` for a TURN-only test. In relay mode,
 the frontend uses only the UDP TURN URL and excludes STUN and TURN-over-TCP.
+
+
+## GIF picker
+
+The chat attachment menu supports both regular media and GIFs. Local GIF files work without extra configuration.
+
+To enable searchable/trending GIFs in the built-in picker, add a GIPHY API key to the frontend environment before building:
+
+```text
+VITE_GIPHY_API_KEY=YOUR_GIPHY_API_KEY
+```
+
+Because this is a Vite frontend variable, the value is included in the client bundle. Use a browser/client API key intended for public frontend use and apply provider-side restrictions where available.
