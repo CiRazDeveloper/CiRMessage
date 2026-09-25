@@ -557,7 +557,7 @@ export const initializeSocket = (server) => {
                             const group = await mod_group.findOne({
                                 _id: groupId,
                                 members: socket.user._id,
-                            }).select("_id");
+                            }).select("_id messageVisibility");
 
                             if (!group) {
                                 callback?.({
@@ -567,11 +567,27 @@ export const initializeSocket = (server) => {
                                 return;
                             }
 
+                            const visibilityEntry = (
+                                group.messageVisibility || []
+                            ).find(
+                                (item) =>
+                                    item.memberId?.toString() ===
+                                    socket.user._id.toString()
+                            );
+
+                            const visibleFrom =
+                                visibilityEntry?.visibleFrom || null;
+
                             const result = await mod_message.updateMany(
                                 {
                                     groupId: group._id,
                                     senderId: { $ne: socket.user._id },
                                     readBy: { $ne: socket.user._id },
+                                    ...(visibleFrom && {
+                                        createdAt: {
+                                            $gte: visibleFrom,
+                                        },
+                                    }),
                                 },
                                 {
                                     $addToSet: {
