@@ -4,6 +4,7 @@ import mod_group from "../../models/mod_group.js";
 import mod_message from "../../models/mod_message.js";
 import mod_user from "../../models/mod_user.js";
 import { STATUS_CODES } from "../../status_codes.js";
+import { getIO } from "../../lib/socket.js";
 
 const isValidId = (id) =>
     mongoose.Types.ObjectId.isValid(id);
@@ -294,6 +295,36 @@ export const leaveGroup = async (req, res) => {
         }
 
         await group.save();
+
+        const actorName =
+            req.user.displayName ||
+            req.user.username ||
+            "A member";
+
+        const systemMessage = await mod_message.create({
+            senderId: userId,
+            groupId: group._id,
+            text: `${actorName} left the group`,
+            systemType: "member-left",
+            readBy: [],
+        });
+
+        await systemMessage.populate(
+            "senderId",
+            "displayName username"
+        );
+
+        const responseMessage = {
+            ...systemMessage.toObject(),
+            sender: systemMessage.senderId,
+            senderId: systemMessage.senderId._id,
+        };
+
+        group.members.forEach((memberId) => {
+            getIO()
+                .to(`user:${memberId.toString()}`)
+                .emit("new-message", responseMessage);
+        });
 
         return res
             .status(STATUS_CODES.INFO.WEB_OK)
