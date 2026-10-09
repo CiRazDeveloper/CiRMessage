@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 export function CallIcon({ name }) {
+    // Every icon is drawn on a 24x24 grid and inherits its CSS text color.
     const common = {
         width: 20,
         height: 20,
@@ -14,12 +16,14 @@ export function CallIcon({ name }) {
     };
 
     switch (name) {
+        // Phone handset: start or accept an audio call.
         case "phone":
             return (
                 <svg {...common}>
                     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.9.34 1.78.65 2.62a2 2 0 0 1-.45 2.11L8.03 9.73a16 16 0 0 0 6.24 6.24l1.28-1.28a2 2 0 0 1 2.11-.45c.84.31 1.72.53 2.62.65A2 2 0 0 1 22 16.92z" />
                 </svg>
             );
+        // Phone handset resting in its cradle: reject or end a call.
         case "phoneEnd":
             return (
                 <svg {...common}>
@@ -28,6 +32,7 @@ export function CallIcon({ name }) {
                     <path d="M21 14.5l-1.1 3.15a2 2 0 0 1-2.5 1.25l-2.23-.74a2 2 0 0 1-1.37-1.9v-1.03" />
                 </svg>
             );
+        // Camera body and lens: video is available.
         case "video":
             return (
                 <svg {...common}>
@@ -35,6 +40,7 @@ export function CallIcon({ name }) {
                     <path d="m16 10 5-3v10l-5-3z" />
                 </svg>
             );
+        // Camera with a diagonal slash: video is disabled.
         case "videoOff":
             return (
                 <svg {...common}>
@@ -43,6 +49,7 @@ export function CallIcon({ name }) {
                     <path d="m16 10 5-3v10l-2.5-1.5" />
                 </svg>
             );
+        // Microphone capsule, support arc, and stand: microphone is active.
         case "mic":
             return (
                 <svg {...common}>
@@ -51,6 +58,7 @@ export function CallIcon({ name }) {
                     <path d="M12 17v5" />
                 </svg>
             );
+        // Microphone with a diagonal slash: microphone is muted.
         case "micOff":
             return (
                 <svg {...common}>
@@ -62,6 +70,7 @@ export function CallIcon({ name }) {
                     <path d="M12 17v5" />
                 </svg>
             );
+        // Monitor and upward arrow: screen sharing is available or active.
         case "screen":
             return (
                 <svg {...common}>
@@ -72,6 +81,7 @@ export function CallIcon({ name }) {
                     <path d="M12 7v6" />
                 </svg>
             );
+        // Monitor with a diagonal slash: screen sharing is stopped.
         case "screenOff":
             return (
                 <svg {...common}>
@@ -82,6 +92,7 @@ export function CallIcon({ name }) {
                     <path d="M12 17v4" />
                 </svg>
             );
+        // Corner marks pointing outward: expand the video tile.
         case "maximize":
             return (
                 <svg {...common}>
@@ -91,6 +102,7 @@ export function CallIcon({ name }) {
                     <path d="M16 21h5v-5" />
                 </svg>
             );
+        // Corner marks pointing inward: restore the video tile.
         case "minimize":
             return (
                 <svg {...common}>
@@ -100,6 +112,7 @@ export function CallIcon({ name }) {
                     <path d="M21 16h-5v5" />
                 </svg>
             );
+        // Two crossing lines: close or hide the item.
         case "close":
             return (
                 <svg {...common}>
@@ -126,6 +139,7 @@ export function CallControlButton({
             onClick={onClick}
             disabled={disabled}
             aria-label={label}
+            title={label}
         >
             <CallIcon name={icon} />
         </button>
@@ -178,7 +192,7 @@ function RemoteVideoTile({ stream, name }) {
 
     if (hidden) return null;
 
-    return (
+    const tile = (
         <div
             className={`call-video-tile call-remote-video ${hasLiveVideo ? "" : "call-video-ended"} ${isExpanded ? "call-video-expanded" : ""}`}
         >
@@ -208,9 +222,16 @@ function RemoteVideoTile({ stream, name }) {
             </div>
         </div>
     );
+
+    return isExpanded ? createPortal(tile, document.body) : tile;
 }
 
-function MediaElement({ stream, video = false, muted = false }) {
+function MediaElement({
+    stream,
+    video = false,
+    muted = false,
+    volume = 1,
+}) {
     const ref = useRef(null);
     const [blocked, setBlocked] = useState(false);
 
@@ -227,10 +248,11 @@ function MediaElement({ stream, video = false, muted = false }) {
     useEffect(() => {
         if (!ref.current) return;
         ref.current.srcObject = stream || null;
+        ref.current.volume = volume;
         if (stream) {
             play();
         }
-    }, [play, stream]);
+    }, [play, stream, volume]);
 
     if (video) {
         return <video ref={ref} autoPlay playsInline muted={muted} />;
@@ -249,6 +271,10 @@ function MediaElement({ stream, video = false, muted = false }) {
 }
 
 export default function CallPanel({ call, participantNames = new Map() }) {
+    const [isCallExpanded, setIsCallExpanded] = useState(false);
+    const [panelPosition, setPanelPosition] = useState(null);
+    const [isDragging, setIsDragging] = useState(false);
+    const dragOffsetRef = useRef({ x: 0, y: 0 });
     const {
         status,
         incomingCall,
@@ -261,21 +287,125 @@ export default function CallPanel({ call, participantNames = new Map() }) {
         isScreenSharing,
         screenStream,
         canShareScreen,
-        startCall,
         acceptCall,
         rejectCall,
         endCall,
+        leaveCall,
         toggleMute,
         toggleCamera,
         toggleScreenShare,
     } = call;
+    const [participantVolumes, setParticipantVolumes] = useState({});
 
     if (status === "idle" && !incomingCall) {
         return null;
     }
 
+    const handlePanelPointerDown = (event) => {
+        if (
+            isCallExpanded ||
+            event.button !== 0 ||
+            event.target.closest("button")
+        ) {
+            return;
+        }
+
+        const panel = event.currentTarget.parentElement;
+        if (!panel) {
+            return;
+        }
+
+        const bounds = panel.getBoundingClientRect();
+        dragOffsetRef.current = {
+            x: event.clientX - bounds.left,
+            y: event.clientY - bounds.top,
+        };
+        setPanelPosition({
+            left: bounds.left,
+            top: bounds.top,
+        });
+        setIsDragging(true);
+        event.currentTarget.setPointerCapture(event.pointerId);
+    };
+
+    const handlePanelPointerMove = (event) => {
+        if (!isDragging || isCallExpanded) {
+            return;
+        }
+
+        const panel = event.currentTarget.parentElement;
+        if (!panel) {
+            return;
+        }
+
+        const bounds = panel.getBoundingClientRect();
+        const left = Math.max(
+            0,
+            Math.min(
+                window.innerWidth - bounds.width,
+                event.clientX - dragOffsetRef.current.x
+            )
+        );
+        const top = Math.max(
+            0,
+            Math.min(
+                window.innerHeight - bounds.height,
+                event.clientY - dragOffsetRef.current.y
+            )
+        );
+
+        setPanelPosition({ left, top });
+    };
+
+    const stopPanelDragging = (event) => {
+        if (!isDragging) {
+            return;
+        }
+
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+        setIsDragging(false);
+    };
+
     return (
-        <section className="call-panel" aria-label="Call controls">
+        <section
+            className={`call-panel ${
+                isCallExpanded ? "call-panel-expanded" : ""
+            } ${isDragging ? "call-panel-dragging" : ""}`}
+            style={
+                !isCallExpanded && panelPosition
+                    ? {
+                          left: `${panelPosition.left}px`,
+                          top: `${panelPosition.top}px`,
+                          right: "auto",
+                          bottom: "auto",
+                      }
+                    : undefined
+            }
+            aria-label="Call controls"
+        >
+            <div
+                className="call-panel-header"
+                onPointerDown={handlePanelPointerDown}
+                onPointerMove={handlePanelPointerMove}
+                onPointerUp={stopPanelDragging}
+                onPointerCancel={stopPanelDragging}
+            >
+                <strong>Call</strong>
+                <CallControlButton
+                    label={
+                        isCallExpanded
+                            ? "Exit full call view"
+                            : "Expand full call view"
+                    }
+                    icon={isCallExpanded ? "minimize" : "maximize"}
+                    className="call-panel-expand-button"
+                    onClick={() =>
+                        setIsCallExpanded((expanded) => !expanded)
+                    }
+                />
+            </div>
             {incomingCall && (
                 <div className="call-incoming">
                     <strong>
@@ -344,10 +474,38 @@ export default function CallPanel({ call, participantNames = new Map() }) {
 
             {Object.entries(remoteStreams).map(([id, stream]) => (
                 <div className="call-audio-tile" key={`audio-${id}`}>
-                    <MediaElement stream={stream} />
-                    <span>
-                        {participantNames.get(id)?.name || "Participant"}
-                    </span>
+                    <MediaElement
+                        stream={stream}
+                        volume={(participantVolumes[id] ?? 100) / 100}
+                    />
+                    <div className="call-participant-audio">
+                        <span>
+                            {participantNames.get(id)?.name || "Participant"}
+                        </span>
+                        <label>
+                            <span className="sr-only">
+                                Volume for{" "}
+                                {participantNames.get(id)?.name ||
+                                    "Participant"}
+                            </span>
+                            <input
+                                type="range"
+                                min="0"
+                                max="100"
+                                value={participantVolumes[id] ?? 100}
+                                onChange={(event) =>
+                                    setParticipantVolumes((current) => ({
+                                        ...current,
+                                        [id]: Number(event.target.value),
+                                    }))
+                                }
+                                aria-label={`Volume for ${
+                                    participantNames.get(id)?.name ||
+                                    "Participant"
+                                }`}
+                            />
+                        </label>
+                    </div>
                 </div>
             ))}
 
@@ -393,10 +551,10 @@ export default function CallPanel({ call, participantNames = new Map() }) {
                     )}
 
                 <CallControlButton
-                    label="End call"
+                    label="Leave call"
                     icon="phoneEnd"
                     className="call-end-button"
-                    onClick={endCall}
+                    onClick={leaveCall || endCall}
                 />
             </div>
         </section>

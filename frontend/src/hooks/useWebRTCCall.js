@@ -84,6 +84,30 @@ export function useWebRTCCall({
         setStatus("ringing");
     }, []);
 
+    useEffect(() => {
+        if (!enabled || !isGroup || !targetId || callIdRef.current) {
+            return undefined;
+        }
+
+        socket.emit(
+            "call-get-active",
+            { groupId: targetId },
+            (activeCall = {}) => {
+                if (!activeCall.active || callIdRef.current) {
+                    return;
+                }
+
+                callIdRef.current = activeCall.callId;
+                callTypeRef.current = activeCall.callType || "video";
+                setCallType(callTypeRef.current);
+                setIncomingCall(activeCall);
+                setStatus("ringing");
+            }
+        );
+
+        return undefined;
+    }, [enabled, isGroup, targetId]);
+
     const participantNames = useMemo(() => {
         const names = new Map();
         for (const participant of participants) {
@@ -187,6 +211,13 @@ export function useWebRTCCall({
         setIsScreenSharing(false);
         setScreenStream(null);
     }, []);
+
+    const leaveCall = useCallback(() => {
+        if (callIdRef.current) {
+            emitSignal("call-leave");
+        }
+        resetCall();
+    }, [emitSignal, resetCall]);
 
     const endCall = useCallback(
         (notify = true) => {
@@ -423,7 +454,7 @@ export function useWebRTCCall({
             emitSignal(
                 "call-accept",
                 { callId: incoming.callId },
-                incoming.callerId
+                isGroup ? null : incoming.callerId
             );
         } catch (error) {
             emitSignal(
@@ -434,7 +465,13 @@ export function useWebRTCCall({
             resetCall();
             throw error;
         }
-    }, [emitSignal, getLocalMedia, incomingCall, resetCall]);
+    }, [
+        emitSignal,
+        getLocalMedia,
+        incomingCall,
+        isGroup,
+        resetCall,
+    ]);
 
     const rejectCall = useCallback(() => {
         if (!incomingCall) {
@@ -446,8 +483,8 @@ export function useWebRTCCall({
             { callId: incomingCall.callId },
             incomingCall.callerId
         );
-        setIncomingCall(null);
-    }, [emitSignal, incomingCall]);
+        resetCall();
+    }, [emitSignal, incomingCall, resetCall]);
 
     const toggleMute = useCallback(() => {
         setIsMuted((muted) => {
@@ -756,7 +793,7 @@ export function useWebRTCCall({
         };
 
         const onReject = (payload) => {
-            if (isOurCall(payload)) {
+            if (isOurCall(payload) && !isGroup) {
                 resetCall();
             }
         };
@@ -767,6 +804,32 @@ export function useWebRTCCall({
             }
         };
 
+        const onLeave = (payload) => {
+            if (!isOurCall(payload) || payload.callerId === currentUserId) {
+                return;
+            }
+
+            if (!isGroup) {
+                resetCall();
+                return;
+            }
+
+            const peer = peersRef.current.get(payload.callerId);
+            peer?.close();
+            peersRef.current.delete(payload.callerId);
+
+            setRemoteStreams((current) => {
+                const next = { ...current };
+                delete next[payload.callerId];
+                return next;
+            });
+            setRemoteScreenStreams((current) => {
+                const next = { ...current };
+                delete next[payload.callerId];
+                return next;
+            });
+        };
+
         socket.on("call-invite", onInvite);
         socket.on("call-accept", onAccept);
         socket.on("call-offer", onOffer);
@@ -775,6 +838,7 @@ export function useWebRTCCall({
         socket.on("call-screen-share", onScreenShare);
         socket.on("call-reject", onReject);
         socket.on("call-end", onEnd);
+        socket.on("call-leave", onLeave);
 
         return () => {
             socket.off("call-invite", onInvite);
@@ -785,6 +849,7 @@ export function useWebRTCCall({
             socket.off("call-screen-share", onScreenShare);
             socket.off("call-reject", onReject);
             socket.off("call-end", onEnd);
+            socket.off("call-leave", onLeave);
         };
     }, [
         createPeer,
@@ -822,6 +887,7 @@ export function useWebRTCCall({
         acceptCall,
         rejectCall,
         endCall: () => endCall(true),
+        leaveCall,
         toggleMute,
         toggleCamera,
         toggleScreenShare,

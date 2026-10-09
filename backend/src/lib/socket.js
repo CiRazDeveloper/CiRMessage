@@ -185,6 +185,7 @@ export const getIO = () => {
 
 export const initializeSocket = (server) => {
     const userPresence = new Map();
+    const activeGroupCalls = new Map();
 
     io = new Server(server, {
         cors: {
@@ -336,6 +337,16 @@ export const initializeSocket = (server) => {
                         context.callScope
                     );
 
+                if (context.callScope.scope === "group") {
+                    activeGroupCalls.set(context.callScope.groupId, {
+                        callId: payload.callId,
+                        callType: payload.callType || "video",
+                        callerId: userId,
+                        callerName: signalingPayload.callerName,
+                        participants: new Set([userId]),
+                    });
+                }
+
                 context.targetUserIds.forEach((targetUserId) => {
                     io.to(`user:${targetUserId}`).emit(
                         "call-invite",
@@ -358,6 +369,34 @@ export const initializeSocket = (server) => {
                 });
             }
         };
+
+        socket.on("call-get-active", async (payload = {}, callback) => {
+            try {
+                const context = await findCallContext(userId, payload);
+                if (context.error || context.callScope.scope !== "group") {
+                    callback?.({ active: false });
+                    return;
+                }
+
+                const activeCall = activeGroupCalls.get(
+                    context.callScope.groupId
+                );
+                callback?.(
+                    activeCall
+                        ? {
+                              active: true,
+                              callId: activeCall.callId,
+                              callType: activeCall.callType,
+                              callerId: activeCall.callerId,
+                              callerName: activeCall.callerName,
+                          }
+                        : { active: false }
+                );
+            } catch (error) {
+                console.error("Could not check active group call:", error);
+                callback?.({ active: false });
+            }
+        });
 
         const forwardCallSignal = async (
             eventName,
@@ -384,6 +423,37 @@ export const initializeSocket = (server) => {
                         payload,
                         context.callScope
                     );
+
+                const activeCall =
+                    context.callScope.scope === "group"
+                        ? activeGroupCalls.get(context.callScope.groupId)
+                        : null;
+
+                if (
+                    eventName === "call-accept" &&
+                    activeCall &&
+                    activeCall.callId === payload.callId
+                ) {
+                    activeCall.participants.add(userId);
+                }
+
+                if (
+                    eventName === "call-leave" &&
+                    activeCall &&
+                    activeCall.callId === payload.callId
+                ) {
+                    activeCall.participants.delete(userId);
+                    if (activeCall.participants.size === 0) {
+                        activeGroupCalls.delete(context.callScope.groupId);
+                    }
+                }
+
+                if (
+                    eventName === "call-end" &&
+                    activeCall?.callId === payload.callId
+                ) {
+                    activeGroupCalls.delete(context.callScope.groupId);
+                }
 
                 if (eventName === "call-ice-candidate") {
                 }
@@ -441,6 +511,16 @@ export const initializeSocket = (server) => {
                     payload,
                     callback
                 )
+        );
+        registerCallSignaling(
+                socket,
+                ["call-leave"],
+                (payload, callback) =>
+                    forwardCallSignal(
+                        "call-leave",
+                        payload,
+                        callback
+                    )
         );
         [
             "call-offer",
@@ -649,6 +729,23 @@ export const initializeSocket = (server) => {
         );
 
         socket.on("disconnect", () => {
+            for (const [groupId, activeCall] of activeGroupCalls) {
+                if (activeCall.participants.delete(userId)) {
+                    activeCall.participants.forEach((participantId) => {
+                        io.to(`user:${participantId}`).emit("call-leave", {
+                            scope: "group",
+                            groupId,
+                            callId: activeCall.callId,
+                            callerId: userId,
+                        });
+                    });
+
+                    if (activeCall.participants.size === 0) {
+                        activeGroupCalls.delete(groupId);
+                    }
+                }
+            }
+
             const currentPresence =
                 userPresence.get(userId);
 

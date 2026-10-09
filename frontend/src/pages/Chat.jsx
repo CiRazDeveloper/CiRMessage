@@ -1910,6 +1910,18 @@ function Chat() {
                         }
                         rows={1}
                         maxLength={2000}
+                        onKeyDown={(event) => {
+                            if (event.key !== "Enter") {
+                                return;
+                            }
+
+                            if (event.shiftKey) {
+                                return;
+                            }
+
+                            event.preventDefault();
+                            event.currentTarget.form?.requestSubmit();
+                        }}
                         onChange={(event) => {
                             setMessageText(event.target.value);
 
