@@ -3,7 +3,7 @@ import {
     useMemo,
     useState,
 } from "react";
-import { NotificationContext } from "./NotificationContext.js";
+import { NotificationContext } from "../scripts/NotificationContext.js";
 
 export function NotificationProvider({
     children,

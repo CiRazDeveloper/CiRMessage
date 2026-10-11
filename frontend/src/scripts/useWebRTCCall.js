@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { socket } from "../scripts/lib/socket.js";
+import { socket } from "./lib/socket.js";
 
 const getId = (value) =>
     value?._id?.toString() || value?.id?.toString() || value?.toString();
