@@ -291,7 +291,6 @@ export default function CallPanel({ call, participantNames = new Map() }) {
         screenStream,
         canShareScreen,
         acceptCall,
-        endCall,
         leaveCall,
         toggleMute,
         toggleCamera,
@@ -375,9 +374,26 @@ export default function CallPanel({ call, participantNames = new Map() }) {
     if (isPendingIncomingCall) {
         return (
             <section
-                className="call-panel"
+                className={`call-panel ${
+                    isCallExpanded ? "call-panel-expanded" : ""
+                }`}
                 aria-label="Call invitation"
             >
+                <div className="call-panel-header">
+                    <strong>Call</strong>
+                    <CallControlButton
+                        label={
+                            isCallExpanded
+                                ? "Exit full call view"
+                                : "Expand full call view"
+                        }
+                        icon={isCallExpanded ? "minimize" : "maximize"}
+                        className="call-panel-expand-button"
+                        onClick={() =>
+                            setIsCallExpanded((expanded) => !expanded)
+                        }
+                    />
+                </div>
                 <div className="call-incoming">
                     <strong>
                         {incomingCall?.callerName || "Caller"} is
@@ -602,12 +618,6 @@ export default function CallPanel({ call, participantNames = new Map() }) {
                             />
                         )}
 
-                    <CallControlButton
-                        label="Leave call"
-                        icon="phoneEnd"
-                        className="call-end-button"
-                        onClick={leaveCall || endCall}
-                    />
             </div>
         </section>
     );
