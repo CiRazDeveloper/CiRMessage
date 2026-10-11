@@ -379,8 +379,9 @@ export default function CallPanel({ call, participantNames = new Map() }) {
             >
                 <div className="call-incoming">
                     <strong>
-                        {incomingCall?.callerName || "Caller"} is
-                        calling ({callType})
+                        {incomingCall?.groupId
+                            ? "Incoming Group Call"
+                            : `${incomingCall?.callerName || "Caller"} is calling (${callType})`}
                     </strong>
                     <div className="call-incoming-actions">
                         <CallControlButton
