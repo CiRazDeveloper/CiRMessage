@@ -1028,17 +1028,6 @@
     border-top: 1px solid #ffffff12;
 }
 
-.call-status {
-    position: absolute;
-    left: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    margin: 0;
-    font-size: 12px;
-    font-weight: 600;
-    opacity: 0.65;
-}
-
 .call-danger {
     background: #ef4444 !important;
 }
@@ -1070,14 +1059,6 @@
         width: 40px;
         height: 40px;
         flex-basis: 40px;
-    }
-
-    .call-status {
-        position: static;
-        width: 100%;
-        transform: none;
-        text-align: center;
-        margin-bottom: 2px;
     }
 
     .call-toolbar {
