@@ -1,7 +1,7 @@
 import "../styles/notification.css";
 
 import { useEffect } from "react";
-import { useNotification } from ".../scripts/NotificationContext.js";
+import { useNotification } from "../scripts/notification_context.js";
 
 function NotificationContainer() {
     const {

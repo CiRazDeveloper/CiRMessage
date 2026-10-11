@@ -11,12 +11,12 @@ import { axiosInstance } from "../scripts/lib/axios.js";
 import { socket } from "../scripts/lib/socket.js";
 import { getUser } from "../storage.js";
 import StatusDot from "./../components/StatusDot.jsx";
-import { useNotification } from "../scripts/NotificationContext.js";
+import { useNotification } from "../scripts/notification_context.js";
 import {
     getMaxMediaSize,
     prepareMediaForUpload,
 } from "../scripts/media.js";
-import { useWebRTCCall } from "../scripts/useWebRTCCall.js";
+import { useWebRTCCall } from "../scripts/use_web_rtc_call.js";
 import CallPanel, {
     CallControlButton,
 } from "../components/CallPanel.jsx";
@@ -33,17 +33,23 @@ function Chat() {
         location.state?.incomingCall?.caller ||
         null;
     const currentUser = getUser();
-    const [loadedUser, setLoadedUser] = useState(null);
+    const [loadedUser, setLoadedUser] = useState({
+        id: null,
+        value: null,
+    });
+    const loadedUserForRoute =
+        loadedUser.id === id ? loadedUser.value : null;
     const user =
-        routeUser && loadedUser
-            ? { ...loadedUser, ...routeUser }
-            : routeUser || loadedUser;
+        routeUser && loadedUserForRoute
+            ? { ...loadedUserForRoute, ...routeUser }
+            : routeUser || loadedUserForRoute;
     const [loadedGroup, setLoadedGroup] = useState(
         location.state?.group || null
     );
     const group = loadedGroup;
     const isGroup = Boolean(location.state?.group) ||
         location.pathname.startsWith("/group/");
+    const groupId = isGroup ? id : null;
     
     const [profilePictureUrl, setProfilePictureUrl] = useState(null);
     const [chatPartnerStatus, setChatPartnerStatus] = useState("Offline");
@@ -87,31 +93,36 @@ function Chat() {
     }, []);
 
     const refreshGroup = useCallback(async () => {
-        if (!isGroup || !id) {
+        if (!groupId) {
             return null;
         }
 
         const response = await axiosInstance.get(
-            `/groups/${id}`
+            `/groups/${groupId}`
         );
 
-        setLoadedGroup(response.data);
         return response.data;
-    }, [id, isGroup]);
+    }, [groupId]);
 
     useEffect(() => {
         if (!isGroup) {
             return;
         }
 
-        refreshGroup().catch((error) => {
-            console.error("Could not load group:", error);
-            showNotification(
-                error.response?.data?.message ||
-                    "Could not load group",
-                "error"
-            );
-        });
+        refreshGroup()
+            .then((freshGroup) => {
+                if (freshGroup) {
+                    setLoadedGroup(freshGroup);
+                }
+            })
+            .catch((error) => {
+                console.error("Could not load group:", error);
+                showNotification(
+                    error.response?.data?.message ||
+                        "Could not load group",
+                    "error"
+                );
+            });
     }, [isGroup, refreshGroup, showNotification]);
 
     const currentUserId =
@@ -195,6 +206,9 @@ function Chat() {
 
         try {
             const freshGroup = await refreshGroup();
+            if (freshGroup) {
+                setLoadedGroup(freshGroup);
+            }
 
             await loadInviteCandidates(
                 freshGroup || group
@@ -383,7 +397,6 @@ function Chat() {
     // --- DIRECT CHAT USER ---
     useEffect(() => {
         if (!id || isGroup) {
-            setLoadedUser(null);
             return;
         }
 
@@ -396,7 +409,6 @@ function Chat() {
             routeUser?.displayName &&
             routeUser?.username
         ) {
-            setLoadedUser(null);
             return;
         }
 
@@ -414,7 +426,10 @@ function Chat() {
                 );
 
                 if (!cancelled) {
-                    setLoadedUser(foundUser || null);
+                    setLoadedUser({
+                        id,
+                        value: foundUser || null,
+                    });
                 }
             } catch (error) {
                 console.error(
@@ -423,7 +438,10 @@ function Chat() {
                 );
 
                 if (!cancelled) {
-                    setLoadedUser(null);
+                    setLoadedUser({
+                        id,
+                        value: null,
+                    });
                 }
             }
         }

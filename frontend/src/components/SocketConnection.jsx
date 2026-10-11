@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { socket } from "../scripts/lib/socket.js";
-import { statuses } from "../scripts/setStatus.js";
-import "../styles/globalCall.css";
+import { statuses } from "../scripts/set_status.js";
+import "../styles/global_call.css";
 
 function SocketConnection() {
     const navigate = useNavigate();

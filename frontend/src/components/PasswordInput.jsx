@@ -1,4 +1,4 @@
-import "./../styles/passwordInput.css";
+import "./../styles/password_input.css";
 
 import toggleInputVisibility from "./ToggleInputVisibility.jsx";
 

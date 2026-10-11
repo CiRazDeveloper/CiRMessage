@@ -1,5 +1,5 @@
 import "./../styles/home.css";
-import "./../styles/switchButton.css";
+import "./../styles/switch_button.css";
 
 import {
     useCallback,
@@ -10,11 +10,11 @@ import { useNavigate } from "react-router-dom";
 import { axiosInstance } from "../scripts/lib/axios.js";
 import { socket } from "../scripts/lib/socket.js";
 import { getDisplayName, getUser } from "./../storage.js";
-import { setStatus, statuses } from "./../scripts/setStatus.js";
+import { setStatus, statuses } from "./../scripts/set_status.js";
 import StatusDot from "./../components/StatusDot.jsx";
 import SwitchButton from "../components/SwitchButton.jsx";
 import TextInput from "../components/TextInput.jsx";
-import { useNotification } from "../scripts/NotificationContext.js";
+import { useNotification } from "../scripts/notification_context.js";
 
 function Home() {
     const navigate = useNavigate();

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Navigate, Outlet } from "react-router-dom";
-import { checkAuth } from "../scripts/security/checkAuth.js";
+import { checkAuth } from "../scripts/security/check_auth.js";
 
 import Loading from "../components/Loading.jsx";
 import SocketConnection from "../components/SocketConnection.jsx";

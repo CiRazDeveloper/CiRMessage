@@ -1,4 +1,4 @@
-import "../styles/resetPassword.css";
+import "../styles/reset_password.css";
 
 import { axiosInstance } from "../scripts/lib/axios.js";
 import { useState } from "react";
@@ -6,7 +6,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import PasswordInput from "../components/PasswordInput.jsx";
 import TextInput from "../components/TextInput.jsx";
-import { useNotification } from "../scripts/NotificationContext.js";
+import { useNotification } from "../scripts/notification_context.js";
 
 function ResetPassword() {
     const navigate = useNavigate();

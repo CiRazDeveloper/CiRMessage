@@ -152,8 +152,6 @@ function RemoteVideoTile({ stream, name }) {
     const [isExpanded, setIsExpanded] = useState(false);
 
     useEffect(() => {
-        setHidden(false);
-
         const updateVideoState = () => {
             setHasLiveVideo(
                 stream
@@ -249,9 +247,14 @@ function MediaElement({
         if (!ref.current) return;
         ref.current.srcObject = stream || null;
         ref.current.volume = volume;
-        if (stream) {
-            play();
-        }
+
+        if (!stream) return undefined;
+
+        const timer = window.setTimeout(() => {
+            void play();
+        }, 0);
+
+        return () => window.clearTimeout(timer);
     }, [play, stream, volume]);
 
     if (video) {
