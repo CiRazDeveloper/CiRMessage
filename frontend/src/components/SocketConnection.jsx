@@ -227,7 +227,7 @@ function SocketConnection() {
             type="button"
             className="global-call-banner"
             onClick={openIncomingCall}
-            aria-label={`Open incoming call from ${incomingCall.callerName}`}
+            aria-label={`Open call from ${incomingCall.callerName}`}
         >
             <span className="global-call-banner-icon" aria-hidden="true">
                 📞
@@ -235,7 +235,7 @@ function SocketConnection() {
 
             <span className="global-call-banner-text">
                 <strong>
-                    Receiving call from {incomingCall.callerName}
+                    Call from {incomingCall.callerName}
                 </strong>
                 <small>
                     {incomingCall.groupId

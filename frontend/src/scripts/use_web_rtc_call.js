@@ -693,7 +693,7 @@ export function useWebRTCCall({
                 ...payload,
                 callerName:
                     participantNames.get(payload.callerId)?.name ||
-                    "Incoming call",
+                    "Caller",
             });
             setStatus("ringing");
         };

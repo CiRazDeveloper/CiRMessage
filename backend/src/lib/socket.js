@@ -155,7 +155,7 @@ const createCallPayload = (
         callerName:
             socket.user.displayName ||
             socket.user.username ||
-            "Incoming call",
+            "Caller",
     };
 
     allowedFields.forEach((field) => {

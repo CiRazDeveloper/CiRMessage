@@ -372,50 +372,15 @@ export default function CallPanel({ call, participantNames = new Map() }) {
         setIsDragging(false);
     };
 
-    return (
-        <section
-            className={`call-panel ${
-                isCallExpanded ? "call-panel-expanded" : ""
-            } ${isDragging ? "call-panel-dragging" : ""}`}
-            style={
-                !isCallExpanded && panelPosition
-                    ? {
-                          left: `${panelPosition.left}px`,
-                          top: `${panelPosition.top}px`,
-                          right: "auto",
-                          bottom: "auto",
-                      }
-                    : undefined
-            }
-            aria-label="Call controls"
-        >
-            {!isPendingIncomingCall && (
-                <div
-                    className="call-panel-header"
-                    onPointerDown={handlePanelPointerDown}
-                    onPointerMove={handlePanelPointerMove}
-                    onPointerUp={stopPanelDragging}
-                    onPointerCancel={stopPanelDragging}
-                >
-                    <strong>Call</strong>
-                    <CallControlButton
-                        label={
-                            isCallExpanded
-                                ? "Exit full call view"
-                                : "Expand full call view"
-                        }
-                        icon={isCallExpanded ? "minimize" : "maximize"}
-                        className="call-panel-expand-button"
-                        onClick={() =>
-                            setIsCallExpanded((expanded) => !expanded)
-                        }
-                    />
-                </div>
-            )}
-            {isPendingIncomingCall && (
+    if (isPendingIncomingCall) {
+        return (
+            <section
+                className="call-panel"
+                aria-label="Call invitation"
+            >
                 <div className="call-incoming">
                     <strong>
-                        {incomingCall?.callerName || "Incoming call"} is
+                        {incomingCall?.callerName || "Caller"} is
                         calling ({callType})
                     </strong>
                     <div className="call-incoming-actions">
@@ -463,10 +428,48 @@ export default function CallPanel({ call, participantNames = new Map() }) {
                         />
                     </div>
                 </div>
-            )}
+            </section>
+        );
+    }
 
-            {!isPendingIncomingCall && (
-                <>
+    return (
+        <section
+            className={`call-panel ${
+                isCallExpanded ? "call-panel-expanded" : ""
+            } ${isDragging ? "call-panel-dragging" : ""}`}
+            style={
+                !isCallExpanded && panelPosition
+                    ? {
+                          left: `${panelPosition.left}px`,
+                          top: `${panelPosition.top}px`,
+                          right: "auto",
+                          bottom: "auto",
+                      }
+                    : undefined
+            }
+            aria-label="Call controls"
+        >
+            <div
+                className="call-panel-header"
+                onPointerDown={handlePanelPointerDown}
+                onPointerMove={handlePanelPointerMove}
+                onPointerUp={stopPanelDragging}
+                onPointerCancel={stopPanelDragging}
+            >
+                <strong>Call</strong>
+                <CallControlButton
+                    label={
+                        isCallExpanded
+                            ? "Exit full call view"
+                            : "Expand full call view"
+                    }
+                    icon={isCallExpanded ? "minimize" : "maximize"}
+                    className="call-panel-expand-button"
+                    onClick={() =>
+                        setIsCallExpanded((expanded) => !expanded)
+                    }
+                />
+            </div>
             {isScreenSharing && screenStream && (
                 <div className="call-screen-preview">
                     <MediaElement stream={screenStream} video muted />
@@ -548,16 +551,13 @@ export default function CallPanel({ call, participantNames = new Map() }) {
                 </div>
             ))}
 
-            {!isPendingIncomingCall && (
-                <div className="call-toolbar">
+            <div className="call-toolbar">
                     <span className="call-status">
                         {status === "calling"
                             ? "Calling..."
-                            : status === "ringing"
-                                ? "Incoming call"
-                                : status === "connecting"
-                                    ? "Connecting..."
-                                    : "Connected"}
+                            : status === "connecting"
+                                ? "Connecting..."
+                                : "Connected"}
                     </span>
 
                     <CallControlButton
@@ -616,10 +616,7 @@ export default function CallPanel({ call, participantNames = new Map() }) {
                         className="call-end-button"
                         onClick={leaveCall || endCall}
                     />
-                </div>
-            )}
-                </>
-            )}
+            </div>
         </section>
     );
 }
