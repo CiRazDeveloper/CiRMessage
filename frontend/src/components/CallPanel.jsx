@@ -291,7 +291,6 @@ export default function CallPanel({ call, participantNames = new Map() }) {
         screenStream,
         canShareScreen,
         acceptCall,
-        rejectCall,
         endCall,
         leaveCall,
         toggleMute,
@@ -420,12 +419,6 @@ export default function CallPanel({ call, participantNames = new Map() }) {
                             icon="phone"
                             className="call-accept-button"
                             onClick={acceptCall}
-                        />
-                        <CallControlButton
-                            label="Reject call"
-                            icon="phoneEnd"
-                            className="call-reject-button"
-                            onClick={rejectCall}
                         />
                     </div>
                 </div>

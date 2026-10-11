@@ -213,11 +213,50 @@ export function useWebRTCCall({
     }, []);
 
     const leaveCall = useCallback(() => {
-        if (callIdRef.current) {
-            emitSignal("call-leave");
+        const activeCallId = callIdRef.current;
+
+        if (!activeCallId) {
+            resetCall();
+            return;
         }
+
+        if (status === "ringing" && !localStreamRef.current) {
+            emitSignal(
+                "call-reject",
+                { callId: activeCallId },
+                incomingCall?.callerId
+            );
+            resetCall();
+            return;
+        }
+
+        emitSignal("call-leave");
+
+        const activeGroupCall = isGroup
+            ? {
+                  callId: activeCallId,
+                  callType: callTypeRef.current,
+                  groupId: targetId,
+                  callerId: incomingCall?.callerId,
+                  callerName: incomingCall?.callerName,
+              }
+            : null;
+
         resetCall();
-    }, [emitSignal, resetCall]);
+
+        if (activeGroupCall) {
+            callIdRef.current = activeGroupCall.callId;
+            setIncomingCall(activeGroupCall);
+            setStatus("ringing");
+        }
+    }, [
+        emitSignal,
+        incomingCall,
+        isGroup,
+        resetCall,
+        status,
+        targetId,
+    ]);
 
     const endCall = useCallback(
         (notify = true) => {
@@ -446,7 +485,12 @@ export function useWebRTCCall({
             callIdRef.current = incoming.callId;
             setCallType(type);
 
-            await getLocalMedia(type);
+            const stream = await getLocalMedia(type);
+            if (isMuted) {
+                stream.getAudioTracks().forEach((track) => {
+                    track.enabled = false;
+                });
+            }
 
             setIncomingCall(null);
             setStatus("connecting");
@@ -470,6 +514,7 @@ export function useWebRTCCall({
         getLocalMedia,
         incomingCall,
         isGroup,
+        isMuted,
         resetCall,
     ]);
 

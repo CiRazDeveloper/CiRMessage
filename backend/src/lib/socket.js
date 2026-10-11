@@ -445,6 +445,7 @@ export const initializeSocket = (server) => {
                     activeCall.participants.delete(userId);
                     if (activeCall.participants.size === 0) {
                         activeGroupCalls.delete(context.callScope.groupId);
+                        socket.emit("call-end", signalingPayload);
                     }
                 }
 
