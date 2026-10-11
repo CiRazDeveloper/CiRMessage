@@ -11,7 +11,7 @@ import { axiosInstance } from "../scripts/lib/axios.js";
 import { socket } from "../scripts/lib/socket.js";
 import { getUser } from "../storage.js";
 import StatusDot from "./../components/StatusDot.jsx";
-import { useNotification } from "../components/NotificationContext.js";
+import { useNotification } from "../scripts/NotificationContext.js";
 import {
     getMaxMediaSize,
     prepareMediaForUpload,

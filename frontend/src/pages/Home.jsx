@@ -14,7 +14,7 @@ import { setStatus, statuses } from "./../scripts/setStatus.js";
 import StatusDot from "./../components/StatusDot.jsx";
 import SwitchButton from "../components/SwitchButton.jsx";
 import TextInput from "../components/TextInput.jsx";
-import { useNotification } from "../components/NotificationContext.js";
+import { useNotification } from "../scripts/NotificationContext.js";
 
 function Home() {
     const navigate = useNavigate();
