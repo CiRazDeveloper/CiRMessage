@@ -552,14 +552,6 @@ export default function CallPanel({ call, participantNames = new Map() }) {
             ))}
 
             <div className="call-toolbar">
-                    <span className="call-status">
-                        {status === "calling"
-                            ? "Calling..."
-                            : status === "connecting"
-                                ? "Connecting..."
-                                : "Connected"}
-                    </span>
-
                     <CallControlButton
                         label={
                             isMuted
