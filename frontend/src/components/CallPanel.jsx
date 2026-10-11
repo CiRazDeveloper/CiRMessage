@@ -415,10 +415,46 @@ export default function CallPanel({ call, participantNames = new Map() }) {
                     </strong>
                     <div className="call-incoming-actions">
                         <CallControlButton
+                            label={
+                                isMuted
+                                    ? "Unmute microphone"
+                                    : "Mute microphone"
+                            }
+                            icon={isMuted ? "micOff" : "mic"}
+                            className={isMuted ? "call-control-active" : ""}
+                            onClick={toggleMute}
+                        />
+                        {callType === "video" && (
+                            <CallControlButton
+                                label={
+                                    isCameraOff
+                                        ? "Turn camera on"
+                                        : "Turn camera off"
+                                }
+                                icon={
+                                    isCameraOff
+                                        ? "videoOff"
+                                        : "video"
+                                }
+                                className={
+                                    isCameraOff
+                                        ? "call-control-active"
+                                        : ""
+                                }
+                                onClick={toggleCamera}
+                            />
+                        )}
+                        <CallControlButton
                             label="Accept call"
                             icon="phone"
                             className="call-accept-button"
                             onClick={acceptCall}
+                        />
+                        <CallControlButton
+                            label="Decline call"
+                            icon="phoneEnd"
+                            className="call-end-button"
+                            onClick={leaveCall}
                         />
                     </div>
                 </div>
@@ -505,54 +541,76 @@ export default function CallPanel({ call, participantNames = new Map() }) {
                 </div>
             ))}
 
-            <div className="call-toolbar">
-                <span className="call-status">
-                    {status === "calling"
-                        ? "Calling..."
-                        : status === "ringing"
-                            ? "Incoming call"
-                            : status === "connecting"
-                                ? "Connecting..."
-                                : "Connected"}
-                </span>
+            {!incomingCall && (
+                <div className="call-toolbar">
+                    <span className="call-status">
+                        {status === "calling"
+                            ? "Calling..."
+                            : status === "ringing"
+                                ? "Incoming call"
+                                : status === "connecting"
+                                    ? "Connecting..."
+                                    : "Connected"}
+                    </span>
 
-                <CallControlButton
-                    label={isMuted ? "Unmute microphone" : "Mute microphone"}
-                    icon={isMuted ? "micOff" : "mic"}
-                    className={isMuted ? "call-control-active" : ""}
-                    onClick={toggleMute}
-                />
-
-                {callType === "video" && (
                     <CallControlButton
-                        label={isCameraOff ? "Turn camera on" : "Turn camera off"}
-                        icon={isCameraOff ? "videoOff" : "video"}
-                        className={isCameraOff ? "call-control-active" : ""}
-                        onClick={toggleCamera}
+                        label={
+                            isMuted
+                                ? "Unmute microphone"
+                                : "Mute microphone"
+                        }
+                        icon={isMuted ? "micOff" : "mic"}
+                        className={isMuted ? "call-control-active" : ""}
+                        onClick={toggleMute}
                     />
-                )}
 
-                {(status === "connecting" || status === "connected") &&
-                    (isScreenSharing || canShareScreen) && (
+                    {callType === "video" && (
                         <CallControlButton
-                            label={isScreenSharing ? "Stop sharing" : "Share screen"}
-                            icon={isScreenSharing ? "screenOff" : "screen"}
+                            label={
+                                isCameraOff
+                                    ? "Turn camera on"
+                                    : "Turn camera off"
+                            }
+                            icon={isCameraOff ? "videoOff" : "video"}
                             className={
-                                isScreenSharing
-                                    ? "call-screen-active"
+                                isCameraOff
+                                    ? "call-control-active"
                                     : ""
                             }
-                            onClick={toggleScreenShare}
+                            onClick={toggleCamera}
                         />
                     )}
 
-                <CallControlButton
-                    label="Leave call"
-                    icon="phoneEnd"
-                    className="call-end-button"
-                    onClick={leaveCall || endCall}
-                />
-            </div>
+                    {(status === "connecting" || status === "connected") &&
+                        (isScreenSharing || canShareScreen) && (
+                            <CallControlButton
+                                label={
+                                    isScreenSharing
+                                        ? "Stop sharing"
+                                        : "Share screen"
+                                }
+                                icon={
+                                    isScreenSharing
+                                        ? "screenOff"
+                                        : "screen"
+                                }
+                                className={
+                                    isScreenSharing
+                                        ? "call-screen-active"
+                                        : ""
+                                }
+                                onClick={toggleScreenShare}
+                            />
+                        )}
+
+                    <CallControlButton
+                        label="Leave call"
+                        icon="phoneEnd"
+                        className="call-end-button"
+                        onClick={leaveCall || endCall}
+                    />
+                </div>
+            )}
         </section>
     );
 }
