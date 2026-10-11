@@ -298,8 +298,10 @@ export default function CallPanel({ call, participantNames = new Map() }) {
         toggleScreenShare,
     } = call;
     const [participantVolumes, setParticipantVolumes] = useState({});
+    const isPendingIncomingCall =
+        status === "ringing" && !localStream;
 
-    if (status === "idle" && !incomingCall) {
+    if (status === "idle" && !isPendingIncomingCall) {
         return null;
     }
 
@@ -408,10 +410,11 @@ export default function CallPanel({ call, participantNames = new Map() }) {
                     }
                 />
             </div>
-            {incomingCall && (
+            {isPendingIncomingCall && (
                 <div className="call-incoming">
                     <strong>
-                        {incomingCall.callerName} is calling ({callType})
+                        {incomingCall?.callerName || "Incoming call"} is
+                        calling ({callType})
                     </strong>
                     <div className="call-incoming-actions">
                         <CallControlButton
@@ -541,7 +544,7 @@ export default function CallPanel({ call, participantNames = new Map() }) {
                 </div>
             ))}
 
-            {!incomingCall && (
+            {!isPendingIncomingCall && (
                 <div className="call-toolbar">
                     <span className="call-status">
                         {status === "calling"
