@@ -374,26 +374,9 @@ export default function CallPanel({ call, participantNames = new Map() }) {
     if (isPendingIncomingCall) {
         return (
             <section
-                className={`call-panel ${
-                    isCallExpanded ? "call-panel-expanded" : ""
-                }`}
+                className="call-panel"
                 aria-label="Call invitation"
             >
-                <div className="call-panel-header">
-                    <strong>Call</strong>
-                    <CallControlButton
-                        label={
-                            isCallExpanded
-                                ? "Exit full call view"
-                                : "Expand full call view"
-                        }
-                        icon={isCallExpanded ? "minimize" : "maximize"}
-                        className="call-panel-expand-button"
-                        onClick={() =>
-                            setIsCallExpanded((expanded) => !expanded)
-                        }
-                    />
-                </div>
                 <div className="call-incoming">
                     <strong>
                         {incomingCall?.callerName || "Caller"} is
@@ -618,6 +601,16 @@ export default function CallPanel({ call, participantNames = new Map() }) {
                             />
                         )}
 
+                    <CallControlButton
+                        label={
+                            status === "calling"
+                                ? "Cancel call"
+                                : "Leave call"
+                        }
+                        icon="phoneEnd"
+                        className="call-end-button"
+                        onClick={leaveCall}
+                    />
             </div>
         </section>
     );
