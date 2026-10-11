@@ -446,6 +446,12 @@ export const initializeSocket = (server) => {
                     if (activeCall.participants.size === 0) {
                         activeGroupCalls.delete(context.callScope.groupId);
                         socket.emit("call-end", signalingPayload);
+                        context.targetUserIds.forEach((targetUserId) => {
+                            io.to(`user:${targetUserId}`).emit(
+                                "call-end",
+                                signalingPayload
+                            );
+                        });
                     }
                 }
 

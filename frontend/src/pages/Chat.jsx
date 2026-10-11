@@ -1179,7 +1179,14 @@ function Chat() {
                     )}
                 </div>
 
-                {call.status === "idle" && !call.incomingCall && (
+                {isGroup && call.activeGroupCall && !call.incomingCall ? (
+                    <CallControlButton
+                        label="Join call"
+                        icon="phone"
+                        className="chat-header-join-call-button"
+                        onClick={call.joinActiveCall}
+                    />
+                ) : call.status === "idle" && !call.incomingCall ? (
                     <div className="chat-header-call-actions">
                         <CallControlButton
                             label="Audio call"
@@ -1194,7 +1201,7 @@ function Chat() {
                             onClick={() => call.startCall("video")}
                         />
                     </div>
-                )}
+                ) : null}
             </header>
 
             <CallPanel

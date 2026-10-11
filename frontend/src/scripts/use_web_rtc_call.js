@@ -50,6 +50,7 @@ export function useWebRTCCall({
 
     const [status, setStatus] = useState("idle");
     const [incomingCall, setIncomingCall] = useState(initialIncomingCall);
+    const [activeGroupCall, setActiveGroupCall] = useState(null);
     const [localStream, setLocalStream] = useState(null);
     const [remoteStreams, setRemoteStreams] = useState({});
     const [remoteScreenStreams, setRemoteScreenStreams] = useState({});
@@ -100,8 +101,7 @@ export function useWebRTCCall({
                 callIdRef.current = activeCall.callId;
                 callTypeRef.current = activeCall.callType || "video";
                 setCallType(callTypeRef.current);
-                setIncomingCall(activeCall);
-                setStatus("ringing");
+                setActiveGroupCall(activeCall);
             }
         );
 
@@ -205,6 +205,7 @@ export function useWebRTCCall({
         setRemoteStreams({});
         setRemoteScreenStreams({});
         setIncomingCall(null);
+        setActiveGroupCall(null);
         setStatus("idle");
         setIsMuted(false);
         setIsCameraOff(false);
@@ -221,18 +222,24 @@ export function useWebRTCCall({
         }
 
         if (status === "ringing" && !localStreamRef.current) {
+            const groupCallToKeep = isGroup
+                ? incomingCall
+                : null;
             emitSignal(
                 "call-reject",
                 { callId: activeCallId },
                 incomingCall?.callerId
             );
             resetCall();
+            if (groupCallToKeep) {
+                setActiveGroupCall(groupCallToKeep);
+            }
             return;
         }
 
         emitSignal("call-leave");
 
-        const activeGroupCall = isGroup
+        const groupCallToKeep = isGroup && status !== "calling"
             ? {
                   callId: activeCallId,
                   callType: callTypeRef.current,
@@ -244,10 +251,8 @@ export function useWebRTCCall({
 
         resetCall();
 
-        if (activeGroupCall) {
-            callIdRef.current = activeGroupCall.callId;
-            setIncomingCall(activeGroupCall);
-            setStatus("ringing");
+        if (groupCallToKeep) {
+            setActiveGroupCall(groupCallToKeep);
         }
     }, [
         emitSignal,
@@ -455,6 +460,7 @@ export function useWebRTCCall({
             try {
                 callTypeRef.current = type;
                 setCallType(type);
+                setActiveGroupCall(null);
                 await getLocalMedia(type);
 
                 const callId = makeCallId(currentUserId, type);
@@ -493,6 +499,7 @@ export function useWebRTCCall({
             }
 
             setIncomingCall(null);
+            setActiveGroupCall(null);
             setStatus("connecting");
 
             emitSignal(
@@ -514,6 +521,44 @@ export function useWebRTCCall({
         getLocalMedia,
         incomingCall,
         isGroup,
+        isMuted,
+        resetCall,
+    ]);
+
+    const joinActiveCall = useCallback(async () => {
+        if (!activeGroupCall) {
+            return;
+        }
+
+        try {
+            const type = activeGroupCall.callType || "video";
+            callIdRef.current = activeGroupCall.callId;
+            callTypeRef.current = type;
+            setCallType(type);
+
+            const stream = await getLocalMedia(type);
+            if (isMuted) {
+                stream.getAudioTracks().forEach((track) => {
+                    track.enabled = false;
+                });
+            }
+
+            setActiveGroupCall(null);
+            setStatus("connecting");
+            emitSignal(
+                "call-accept",
+                { callId: activeGroupCall.callId },
+                null
+            );
+        } catch (error) {
+            resetCall();
+            setActiveGroupCall(activeGroupCall);
+            throw error;
+        }
+    }, [
+        activeGroupCall,
+        emitSignal,
+        getLocalMedia,
         isMuted,
         resetCall,
     ]);
@@ -689,6 +734,9 @@ export function useWebRTCCall({
             callIdRef.current = payload.callId;
             callTypeRef.current = payload.callType || "video";
             setCallType(callTypeRef.current);
+            if (isGroup) {
+                setActiveGroupCall(payload);
+            }
             setIncomingCall({
                 ...payload,
                 callerName:
@@ -844,7 +892,11 @@ export function useWebRTCCall({
         };
 
         const onEnd = (payload) => {
-            if (isOurCall(payload)) {
+            if (
+                isOurCall(payload) ||
+                payload?.callId === activeGroupCall?.callId
+            ) {
+                setActiveGroupCall(null);
                 resetCall();
             }
         };
@@ -903,6 +955,7 @@ export function useWebRTCCall({
         enabled,
         endCall,
         flushIce,
+        activeGroupCall,
         isGroup,
         makeOffer,
         participantNames,
@@ -919,6 +972,7 @@ export function useWebRTCCall({
     return {
         status,
         incomingCall,
+        activeGroupCall,
         localStream,
         remoteStreams,
         remoteScreenStreams,
@@ -930,6 +984,7 @@ export function useWebRTCCall({
         canShareScreen,
         startCall,
         acceptCall,
+        joinActiveCall,
         rejectCall,
         endCall: () => endCall(true),
         leaveCall,

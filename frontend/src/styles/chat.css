@@ -595,6 +595,20 @@
     border-color: #ffffff12;
 }
 
+.chat-header-join-call-button {
+    margin-left: auto;
+    min-width: 108px;
+    background: #22c55e;
+    border-color: #22c55e;
+    color: #fff;
+    box-shadow: 0 5px 16px #22c55e44;
+}
+
+.chat-header-join-call-button:hover {
+    background: #2dd46a;
+    border-color: #2dd46a;
+}
+
 /* CALLING */
 .call-start-actions {
     display: flex;
