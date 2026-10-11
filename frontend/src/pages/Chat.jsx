@@ -16,7 +16,7 @@ import {
     getMaxMediaSize,
     prepareMediaForUpload,
 } from "../scripts/media.js";
-import { useWebRTCCall } from "../hooks/useWebRTCCall.js";
+import { useWebRTCCall } from "../scripts/useWebRTCCall.js";
 import CallPanel, {
     CallControlButton,
 } from "../components/CallPanel.jsx";
