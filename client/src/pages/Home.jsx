@@ -1,6 +1,6 @@
 
-function Signup() {
+function Home() {
 
 }
 
-export default Signup;
+export default Home;
