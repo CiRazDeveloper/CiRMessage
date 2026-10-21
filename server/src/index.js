@@ -12,10 +12,10 @@ import { initializeSocket } from "./lib/socket.js";
 import { getAllowedOrigins } from "./lib/cors.js";
 
 import routesAuth from "./routes/auth.js";
-import profileRoutes from "./routes/profile.js";
-import mediaRoutes from "./routes/media.js";
-import routesMessages from "./routes/messages.js";
-import routesGroups from "./routes/groups.js";
+// import profileRoutes from "./routes/profile.js";
+// import mediaRoutes from "./routes/media.js";
+// import routesMessages from "./routes/messages.js";
+// import routesGroups from "./routes/groups.js";
 
 // --- CONFIGURATIONS ---
 dotenv.config();
@@ -54,10 +54,10 @@ const HOST = process.env.HOST || "0.0.0.0";
 
 // --- ROUTES ---
 app.use("/api/auth", routesAuth);
-app.use("/api/profile", profileRoutes);
-app.use("/api/media", mediaRoutes);
-app.use("/api/messages", routesMessages);
-app.use("/api/groups", routesGroups);
+// app.use("/api/profile", profileRoutes);
+// app.use("/api/media", mediaRoutes);
+// app.use("/api/messages", routesMessages);
+// app.use("/api/groups", routesGroups);
 
 // --- HEALTH CHECK ---
 app.get("/api/health", (_req, res) => {
