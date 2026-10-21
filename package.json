@@ -9,7 +9,8 @@
     "dev:client": "npm run dev --prefix client",
     "build": "npm run build --prefix client",
     "preview": "npm run preview --prefix client",
-    "start": "npm run start --prefix server"
+    "start": "npm run start --prefix server",
+    "start:all": "npm run install:all && npm run build && npm run start"
   },
   "keywords": [],
   "author": "",
