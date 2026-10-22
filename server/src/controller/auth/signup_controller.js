@@ -5,7 +5,7 @@ import mod_user from "../../model/mod_user.js";
 import { encrypt } from "../../utility/crypt.js";
 import { hashPassword } from "../../utility/hash.js";
 import { STATUS_CODES } from "../../utility/status_codes.js";
-import { generateToken } from "../../utility/utils.js";
+import { generateToken } from "../../utility/jwt.js";
 
 async function checkDisplayName(displayName) {
     if (displayName.length < 3) {
