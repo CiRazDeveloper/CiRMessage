@@ -4,7 +4,7 @@ import { login } from "../controller/auth/login_controller.js";
 import { logout } from "../controller/auth/logout_controller.js";
 import { resetPassword } from "../controller/auth/reset_password_controller.js";
 import { signup } from "../controller/auth/signup_controller.js";
-import { protectRoute } from "../middlewares/mid_auth.js";
+import { protectRoute } from "../middleware/mid_auth.js";
 import { STATUS_CODES } from "../status_codes.js";
 
 
