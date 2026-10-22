@@ -12,13 +12,14 @@ import { STATUS_CODES } from "../utility/status_codes.js";
 const router = express.Router();
 
 // --- API METHODS ---
-router.post("/signup", signup);
 
 router.post("/login", login);
 
-router.post("/resetPassword", resetPassword);
-
 router.post("/logout", logout);
+
+router.post("/signup", signup);
+
+router.post("/resetPassword", resetPassword);
 
 router.get("/check", protectRoute, (req, res) => res.status(STATUS_CODES.INFO.WEB_OK).json(req.user));
 
