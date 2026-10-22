@@ -2,8 +2,8 @@ import "dotenv/config";
 
 import mod_user from "../../model/mod_user.js";
 
-import { generateToken } from "../../ultilities/utils.js";
-import { verifyPassword } from "../../ultilities/hash.js";
+import { generateToken } from "../../utility/utils.js";
+import { verifyPassword } from "../../utility/hash.js";
 import { STATUS_CODES } from "../../status_codes.js";
 
 async function checkUser(user) {

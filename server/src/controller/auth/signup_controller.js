@@ -2,10 +2,10 @@ import "dotenv/config";
 
 import mod_user from "../../model/mod_user.js";
 
-import { encrypt } from "../../ultilities/crypt.js";
-import { hashPassword } from "../../ultilities/hash.js";
-import { STATUS_CODES } from "../../ultilities/status_codes.js";
-import { generateToken } from "../../ultilities/utils.js";
+import { encrypt } from "../../utility/crypt.js";
+import { hashPassword } from "../../utility/hash.js";
+import { STATUS_CODES } from "../../utility/status_codes.js";
+import { generateToken } from "../../utility/utils.js";
 
 async function checkDisplayName(displayName) {
     if (displayName.length < 3) {
