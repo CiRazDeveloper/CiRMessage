@@ -1,6 +1,6 @@
 import "dotenv/config";
 
-import mod_user from "../../models/mod_user.js";
+import mod_user from "../../model/mod_user.js";
 
 import { encrypt } from "../../ultilities/crypt.js";
 import { hashPassword } from "../../ultilities/hash.js";

@@ -1,7 +1,7 @@
 import "dotenv/config";
 
 import jwt from "jsonwebtoken"
-import mod_user from "../models/mod_user.js";
+import mod_user from "../model/mod_user.js";
 
 import { STATUS_CODES } from "../status_codes.js";
 
