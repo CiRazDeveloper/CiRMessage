@@ -1,6 +1,6 @@
 import "dotenv/config";
 
-import { STATUS_CODES } from "../../status_codes.js";
+import { STATUS_CODES } from "../../utility/status_codes.js";
 
 const isProduction = process.env.NODE_ENV !== "development";
 

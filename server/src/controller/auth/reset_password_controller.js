@@ -4,7 +4,7 @@ import mod_user from "../../model/mod_user.js";
 
 import { decrypt } from "../../utility/crypt.js";
 import { hashPassword } from "../../utility/hash.js";
-import { STATUS_CODES } from "../../status_codes.js";
+import { STATUS_CODES } from "../../utility/status_codes.js";
 
 async function checkUser(user) {
     if (!user) {
