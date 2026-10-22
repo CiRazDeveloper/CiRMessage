@@ -3,7 +3,7 @@ import "dotenv/config";
 import jwt from "jsonwebtoken"
 import mod_user from "../model/mod_user.js";
 
-import { STATUS_CODES } from "../status_codes.js";
+import { STATUS_CODES } from "../utility/status_codes.js";
 
 export const protectRoute = async (req, res, nextFunc) => {
     try {
