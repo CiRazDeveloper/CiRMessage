@@ -9,15 +9,17 @@ import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
 import Home from "./pages/Home.jsx";
 
+import Signup from "./pages/Signup.jsx";
+
 function App() {
     return (
         <BrowserRouter>
             <Routes>
 
                 {/* Public routes */}
-                {/* <Route path="/login" element={<Login />} />
+                <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
-                <Route path="/resetPassword" element={<ResetPassword />} /> */}
+                {/* <Route path="/resetPassword" element={<ResetPassword />} /> */}
 
                 {/* Protected routes */}
                 <Route element={<ProtectedRoute />}>
