@@ -11,11 +11,11 @@ import { connectDB } from "./lib/db.js";
 import { initializeSocket } from "./lib/socket.js";
 import { getAllowedOrigins } from "./lib/cors.js";
 
-import routesAuth from "./routes/auth.js";
-// import profileRoutes from "./routes/profile.js";
-// import mediaRoutes from "./routes/media.js";
-// import routesMessages from "./routes/messages.js";
-// import routesGroups from "./routes/groups.js";
+import routeAuth from "./route/auth.js";
+// import profileRoutes from "./route/profile.js";
+// import mediaRoutes from "./route/media.js";
+// import routesMessages from "./route/messages.js";
+// import routesGroups from "./route/groups.js";
 
 // --- CONFIGURATIONS ---
 dotenv.config();
@@ -53,7 +53,7 @@ const PORT = Number(process.env.PORT || 2205);
 const HOST = process.env.HOST || "0.0.0.0";
 
 // --- ROUTES ---
-app.use("/api/auth", routesAuth);
+app.use("/api/auth", routeAuth);
 // app.use("/api/profile", profileRoutes);
 // app.use("/api/media", mediaRoutes);
 // app.use("/api/messages", routesMessages);

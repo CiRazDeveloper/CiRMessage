@@ -16,12 +16,12 @@ function App() {
         <BrowserRouter>
             <Routes>
 
-                {/* Public routes */}
+                {/* Public route */}
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
                 {/* <Route path="/resetPassword" element={<ResetPassword />} /> */}
 
-                {/* Protected routes */}
+                {/* Protected route */}
                 <Route element={<ProtectedRoute />}>
                     <Route path="/home" element={<Home />} />
                     {/* <Route path="/chat/:id" element={<Chat />} />
