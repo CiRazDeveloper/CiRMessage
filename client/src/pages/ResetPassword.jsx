@@ -1,17 +1,10 @@
 
-function MyButton() {
-  return (
-    <button>
-      I'm a button
-    </button>
-  );
+function ResetPassword() {
+    return (
+        <div>
+            <h1>Reset Password</h1>
+        </div>
+    );
 }
 
-function Signup() {
-    <div>
-      <h1>Signup</h1>
-      <MyButton />
-    </div>
-}
-
-export default Signup;
+export default ResetPassword;

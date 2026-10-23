@@ -1,0 +1,13 @@
+@import "./../general.css";
+
+.inputField {
+    position: relative;
+}
+
+.inputField label {
+    font-family: var(--font-primary);
+}
+
+.inputField label span {
+    color: var(--color-text-critical);
+}

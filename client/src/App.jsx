@@ -10,7 +10,7 @@ import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import Home from "./pages/Home.jsx";
 
 import Login from "./pages/Login.jsx";
-import Signup from "./pages/Signup.jsx";
+import Register from "./pages/Register.jsx";
 import ResetPassword from "./pages/ResetPassword.jsx";
 
 function App() {
@@ -20,7 +20,7 @@ function App() {
 
                 {/* Public route */}
                 <Route path="/login" element={<Login />} />
-                <Route path="/signup" element={<Signup />} />
+                <Route path="/register" element={<Register />} />
                 <Route path="/resetPassword" element={<ResetPassword />} />
 
                 {/* Protected route */}
