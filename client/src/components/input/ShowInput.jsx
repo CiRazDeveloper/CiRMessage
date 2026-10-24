@@ -1,4 +1,4 @@
-import "./../../styles/input/showInput.css";
+import "./../../styles/components/input/showInput.css";
 
 function ShowInput({ isVisible, onToggle }) {
     return (

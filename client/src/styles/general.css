@@ -3,5 +3,7 @@
     --font-primary: Helvetica, Arial, sans-serif;
 
     /* COLORS */
-    --color-text-critical: #f87e7aff: 
+    --color-text-critical: #f87e7aff;
+
+    --elements-space: 20px;
 }

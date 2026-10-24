@@ -1,0 +1,34 @@
+@import "./../../general.css";
+
+.inputField {
+    display: flex;
+    flex-direction: column;
+
+    padding-bottom: inherit;
+    gap: 5px;
+}
+
+.inputField label {
+    font-family: var(--font-primary);
+    font-size: 10px;
+}
+
+.inputField label span {
+    color: var(--color-text-critical);
+}
+
+.inputWrapper {
+    display: flex;
+}
+
+.inputWrapper input {
+    color: #ffffff;
+    background-color: #0a0a0a;
+
+    width: 100%;
+    height: 25px;
+
+    border-width: 0.5px;
+    border-radius: 3px;
+    border-color: #252525;
+}

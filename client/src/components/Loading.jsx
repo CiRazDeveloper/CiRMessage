@@ -1,4 +1,4 @@
-import "../styles/loading.css";
+import "../styles/pages/loading.css";
 
 function Loading({ fullScreen = true }) {
     return (

@@ -1,4 +1,4 @@
-import "./../../styles/input/inputField.css";
+import "./../../styles/components/input/inputField.css";
 
 import { useState } from "react";
 
