@@ -1,3 +1,4 @@
+import "../styles/general.css";
 import "../styles/pages/login.css";
 
 import InputField from "../components/input/InputField.jsx"
@@ -48,8 +49,7 @@ function Login() {
         <div className="main">
             <form className="form">
                 <div className="container">
-                    <h1>Welcome back!</h1>
-                    <h6>Login with your credentials below!</h6>
+                    <h1>Welcome stranger!</h1>
 
                     <div className="inputs">
                         <InputField

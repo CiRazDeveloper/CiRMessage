@@ -1,3 +1,5 @@
+import "../styles/general.css";
+import "../styles/pages/home.css";
 
 function Home() {
     return (

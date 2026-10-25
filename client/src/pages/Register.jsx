@@ -1,3 +1,4 @@
+import "../styles/general.css";
 import "../styles/pages/register.css";
 
 import InputField from "../components/input/InputField.jsx"
