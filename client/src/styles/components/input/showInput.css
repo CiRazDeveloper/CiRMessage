@@ -1,11 +1,9 @@
-@import "./../../general.css";
-
 :root {
-    --img-width: calc(var(--elements-height) - 25px);
+    --img-width: calc(var(--element-height) - 25px);
 }
 
 button {
-    background-color: var(--color-background-btn);
+    background-color: var(--color-primary);
     border-color: var(--color-border-input);
     
     height: inherit;

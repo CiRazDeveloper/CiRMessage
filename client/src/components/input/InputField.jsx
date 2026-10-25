@@ -1,3 +1,4 @@
+import "./../../styles/general.css";
 import "./../../styles/components/input/inputField.css";
 
 import { useState } from "react";

@@ -3,7 +3,6 @@
     --color-primary: #b60e25;
     --color-background-input: #0a0a0a;
     --color-border-input: #1a1919;
-    --color-link: #bb0000;
     --color-text: #ffffff;
     --color-text-critical: #f87e7aff;
 
@@ -11,7 +10,7 @@
     --font-primary: Helvetica, Arial, sans-serif;
 
     /* SIZE */
-    --elements-space: 20px;
-    --elements-height: 40px;
+    --element-space: 20px;
+    --element-height: 40px;
     --text-size-btn: 20px;
 }

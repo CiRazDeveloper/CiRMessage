@@ -28,17 +28,17 @@
 
     width: fit-content;
     height: fit-content;
-
-    margin: 0px;
 }
 
 .inputs {
     display: flex;
     flex-direction: column;
+
+    padding-bottom: var(--element-space);
 }
 
 #link-forgot-password {
-    color: var(--color-link);
+    color: var(--color-primary);
 
     font-size: var(--link-size);
 }
@@ -47,7 +47,7 @@
     background-color: var(--color-primary);
 
     width: 100%;
-    height: var(--elements-height);
+    height: var(--element-height);
 
     border-width: 1px;
     border-radius: 5px;
@@ -64,5 +64,5 @@
 }
 
 #register #link-register {
-    color: var(--color-link);
+    color: var(--color-primary);
 }
