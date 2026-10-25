@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import ShowInput from "./ShowInput.jsx"
 
-function InputField({label = "", placeholder = "", isRequired = false, type = "text", name }) {
+function InputField({label = "", placeholder = "", isRequired = false, type = "text", name, onChange }) {
     const [isVisible, setIsVisible] = useState(false);
     const inputType = type === "password" && isVisible ? "text" : type;
 
@@ -22,6 +22,7 @@ function InputField({label = "", placeholder = "", isRequired = false, type = "t
                     placeholder={placeholder}
                     type={inputType}
                     required={isRequired}
+                    onChange={onChange}
                 />
 
                 {type === "password" && (

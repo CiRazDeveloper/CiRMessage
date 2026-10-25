@@ -52,6 +52,21 @@ async function checkEmail(email) {
     return null;
 }
 
+async function checkSecret(secret) {
+    if (secret.length < 12) {
+        return "Secret length must be twelve (12) or more";
+    }
+    
+    // Environment variables are strings, so convert to RegExp
+    const secretRegex = new RegExp(process.env.SEC_REGEX);
+    
+    if (!secretRegex.test(secret)) {
+        return "The secret needs to contain at least one (1) lowercase letter, one (1) uppercase letter, one (1) number";
+    }
+    
+    return null;
+}
+
 async function checkPassword(password) {
     if (password.length < 8) {
         return "Password length must be eight (8) or more";
@@ -62,21 +77,6 @@ async function checkPassword(password) {
 
     if (!passwordRegex.test(password)) {
         return "The password needs to contain at least one (1) lowercase letter, one (1) uppercase letter, one (1) number and one (1) special character";
-    }
-
-    return null;
-}
-
-async function checkSecret(secret) {
-    if (secret.length < 12) {
-        return "Secret length must be twelve (12) or more";
-    }
-
-    // Environment variables are strings, so convert to RegExp
-    const secretRegex = new RegExp(process.env.SEC_REGEX);
-
-    if (!secretRegex.test(secret)) {
-        return "The secret needs to contain at least one (1) lowercase letter, one (1) uppercase letter, one (1) number";
     }
 
     return null;
@@ -124,6 +124,14 @@ export const signup = async (req, res) => {
                 .json({ message: findEmailError });
         }
 
+        // Validate secret
+        const secretError = await checkSecret(secret);
+        if (secretError) {
+            return res
+                .status(STATUS_CODES.ERROR.WEB_BAD_REQUEST)
+                .json({ message: secretError });
+        }
+
         // Validate password
         const passwordError = await checkPassword(password);
         if (passwordError) {
@@ -132,13 +140,6 @@ export const signup = async (req, res) => {
             .json({ message: passwordError });
         }
 
-        // Validate secret
-        const secretError = await checkSecret(secret);
-        if (secretError) {
-            return res
-                .status(STATUS_CODES.ERROR.WEB_BAD_REQUEST)
-                .json({ message: secretError });
-        }
 
         // Hashes
         const hashedSecret = await encrypt(secret);

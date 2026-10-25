@@ -1,5 +1,9 @@
 @import "./../general.css";
 
+:root {
+    --link-size: 15px;
+}
+
 .main {
     display: flex;
     flex-direction: column;
@@ -11,56 +15,63 @@
     align-items: center;
 }
 
+.form {
+    display: block;
+    width: 40%;
+}
+
 .container {
     display: flex;
     flex-direction: column;
-    
-    width: fit-content;
 }
 
 .container h1 {
     color: #b60e25;
+
+    width: fit-content;
+    height: fit-content;
+
     margin: 0;
 }
 
 .container h6 {
-    font-size: small;
+    font-size: larger;
     font-weight: 100;
-    margin: 0;
     
+    margin: 0;
     padding-bottom: var(--elements-space);
 }
 
 .inputs {
     display: flex;
     flex-direction: column;
-    
+
     padding-bottom: var(--elements-space);
 }
 
 #link-forgot-password {
     color: var(--color-link);
 
-    font-size: 10px;
+    font-size: var(--link-size);
     font-style: bold;
 }
 
 #loginBtn {
     background-color: var(--color-background-btn);
 
+    width: 100%;
+    height: var(--elements-height);
+
     border-width: 1px;
     border-radius: 5px;
 
-    width: 100%;
-    height: 30px;
-
-    font-size: 10px;
+    font-size: var(--text-size-btn);
     font-family: var(--font-primary);
     font-weight: bold;
 }
 
 #register {
-    font-size: 10px;
+    font-size: var(--link-size);
     font-style: bold;
 }
 

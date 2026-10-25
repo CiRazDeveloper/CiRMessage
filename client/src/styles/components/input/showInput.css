@@ -1,16 +1,22 @@
+@import "./../../general.css";
+
+:root {
+    --img-width: calc(var(--elements-height) - 25px);
+}
+
 button {
     background-color: var(--color-background-btn);
     border-color: var(--color-border-input);
     
-    height: 30px;
-    width: 30px;
+    height: inherit;
+    width: var(--button-width);
  
     border-width: 1px;
     border-radius: 5px;
 }
     
-
 img {
-    width: 10px;
-    height: 10px;
+    width: calc(var(--img-width) + 10px);
+    height: var(--img-width);
+    object-fit: scale-down;
 }

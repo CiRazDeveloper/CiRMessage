@@ -1,0 +1,66 @@
+@import "./../general.css";
+
+:root {
+    --link-size: 15px;
+}
+
+.main {
+    display: flex;
+    flex-direction: column;
+
+    min-width: 100vw;
+    min-height: 100vh;
+
+    justify-content: center;
+    align-items: center;
+}
+
+.form {
+    display: block;
+    width: 40%;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+}
+
+.container h1 {
+    color: #b60e25;
+    
+    width: fit-content;
+    height: fit-content;
+    
+    margin: 0;
+    padding-bottom: var(--elements-space);
+}
+
+.inputs {
+    display: flex;
+    flex-direction: column;
+
+    padding-bottom: var(--elements-space);
+}
+
+#registerBtn {
+    background-color: var(--color-background-btn);
+    
+    width: 100%;
+    height: var(--elements-height);
+
+    border-width: 1px;
+    border-radius: 5px;
+
+    font-size: var(--text-size-btn);
+    font-family: var(--font-primary);
+    font-weight: bold;
+}
+
+#login {
+    font-size: var(--link-size);
+    font-style: bold;
+}
+
+#login #link-login {
+    color: var(--color-link);
+}

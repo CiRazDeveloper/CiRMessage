@@ -1,5 +1,8 @@
 import "./../../styles/components/input/showInput.css";
 
+import eyeOpen from "./../../assets/eyeOpen.svg";
+import eyeShut from "./../../assets/eyeShut.svg";
+
 function ShowInput({ isVisible, onToggle }) {
     return (
         <button
@@ -8,7 +11,7 @@ function ShowInput({ isVisible, onToggle }) {
             aria-label={isVisible ? "Hide password" : "Show password"}
             title={isVisible ? "Hide password" : "Show password"}
         >
-            {isVisible ? <img src="/eye_off.svg"/> : <img src="/eye_on.svg"/>}
+            {isVisible ? <img src={eyeShut}/> : <img src={eyeOpen}/>}
         </button>
     );
 }

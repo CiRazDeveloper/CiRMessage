@@ -10,7 +10,7 @@
 
 .inputField label {
     font-family: var(--font-primary);
-    font-size: 10px;
+    font-size: auto;
 }
 
 .inputField label span {
@@ -26,11 +26,11 @@
     color: var(--color-text);
 
     width: 100%;
-    height: 30px;
+    height: var(--elements-height);
 
-    border-width: 1px;
+    border-width: 0.1px;
     border-radius: 5px;
     border-color: var(--color-border-input);
 
-    font-size: 10px;
+    font-size: auto;
 }
