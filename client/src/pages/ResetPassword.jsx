@@ -40,15 +40,15 @@ function ResetPassword() {
     }
 
     return (
-        <div className="main">
-            <form className="form">
-                <div className="container">
+        <div className="reset-password_main">
+            <form className="reset-password_form">
+                <div className="reset-password_container">
                     <h1>Reset Password!</h1>
 
-                    <div className="inputs">
+                    <div className="reset-password_inputs">
                         <InputField
                             label="Email or Username"
-                            name="usernameOrEmailInput"
+                            name="reset-password_identifier-input"
                             isRequired
                             onChange={(e) => setIdentifier(e.target.value)}
                         />
@@ -56,7 +56,7 @@ function ResetPassword() {
                         <InputField
                             label="Secret"
                             placeholder="Required for password reset!"
-                            name="secretInput"
+                            name="reset-password_secret-input"
                             type="password"
                             isRequired
                             onChange={(e) => setSecret(e.target.value)}
@@ -64,18 +64,16 @@ function ResetPassword() {
 
                         <InputField
                             label="Password"
-                            name="passwordInput"
+                            name="reset-password_password-input"
                             type="password"
                             isRequired
                             onChange={(e) => setPassword(e.target.value)}
                         />
                     </div>
 
-                    <button id="resetPasswordBtn" onClick={handleResetPassword}>Reset Password</button>
+                    <button id="reset-password_btn" onClick={handleResetPassword}>Reset Password</button>
 
-                    <p id="login">
-                        <Link to="/login" id="link-login">Back to Login</Link>
-                    </p>
+                    <Link to="/login" id="reset-password_link-login">Back to Login</Link>
                 </div>
             </form>
         </div>

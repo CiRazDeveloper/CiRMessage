@@ -4,7 +4,7 @@
 
 button {
     background-color: var(--color-primary);
-    border-color: var(--color-border-input);
+    border-color: var(--color-border);
     
     height: inherit;
     width: var(--button-width);

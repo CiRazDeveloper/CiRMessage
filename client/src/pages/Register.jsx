@@ -46,29 +46,29 @@ function Register() {
     }
 
     return (
-        <div className="main">
-            <form className="form">
-                <div className="container">
+        <div className="register_main">
+            <form className="register_form">
+                <div className="register_container">
                     <h1>Create an account!</h1>
 
-                    <div className="inputs">
+                    <div className="register_inputs">
                         <InputField
                             label="Display Name"
-                            name="displayNameInput"
+                            name="register_display-name-input"
                             isRequired
                             onChange={(e) => setDisplayName(e.target.value)}
                         />
 
                         <InputField
                             label="Username"
-                            name="usernameInput"
+                            name="register_username-input"
                             isRequired
                             onChange={(e) => setUsername(e.target.value)}
                         />
 
                         <InputField
                             label="Email"
-                            name="emailInput"
+                            name="register_email-input"
                             isRequired
                             onChange={(e) => setEmail(e.target.value)}
                         />
@@ -76,7 +76,7 @@ function Register() {
                         <InputField
                             label="Secret"
                             placeholder="Required for password reset, cannot be changed!"
-                            name="secretInput"
+                            name="register_secret-input"
                             type="password"
                             isRequired
                             onChange={(e) => setPassword(e.target.value)}
@@ -84,18 +84,18 @@ function Register() {
 
                         <InputField
                             label="Password"
-                            name="passwordInput"
+                            name="register_password-input"
                             type="password"
                             isRequired
                             onChange={(e) => setSecret(e.target.value)}
                         />
                     </div>
 
-                    <button id="registerBtn" onClick={handleRegister}>Register</button>
+                    <button id="register_btn" onClick={handleRegister}>Register</button>
 
-                    <p id="login">
+                    <p id="register_text-link">
                         Already have an account?{" "}
-                        <Link to="/login" id="link-login">Login</Link>
+                        <Link to="/login" id="register_link-login">Login</Link>
                     </p>
                 </div>
             </form>

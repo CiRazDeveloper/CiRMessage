@@ -2,7 +2,7 @@
     --link-size: 15px;
 }
 
-.main {
+.register_main {
     display: flex;
     flex-direction: column;
 
@@ -13,35 +13,35 @@
     align-items: center;
 }
 
-.form {
+.register_form {
     display: block;
     width: 40%;
 }
 
-.container {
+.register_container {
     display: flex;
     flex-direction: column;
 }
 
-.container h1 {
+.register_container h1 {
     color: var(--color-primary);
     
     width: fit-content;
     height: fit-content;
 }
 
-.inputs {
+.register_inputs {
     display: flex;
     flex-direction: column;
 
     padding-bottom: var(--element-space);
 }
 
-#secretInput::placeholder {
+#register_secretInput::placeholder {
     font-style:italic;
 }
 
-#registerBtn {
+#register_btn {
     background-color: var(--color-primary);
     
     width: 100%;
@@ -55,12 +55,12 @@
     font-weight: bold;
 }
 
-#login {
+#register_text-link {
     font-size: var(--link-size);
 
     margin: 0px;
 }
 
-#login #link-login {
+#register_text-link #register_link-login {
     color: var(--color-primary);
 }

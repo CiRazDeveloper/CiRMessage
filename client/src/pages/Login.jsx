@@ -44,37 +44,37 @@ function Login() {
     }
 
     return (
-        <div className="main">
-            <form className="form">
-                <div className="container">
+        <div className="login_main">
+            <form className="login_form">
+                <div className="login_container">
                     <h1>Welcome stranger!</h1>
 
-                    <div className="inputs">
+                    <div className="login_inputs">
                         <InputField
                             label="Email or Username"
-                            name="usernameOrEmailInput"
+                            name="login_identifier-input"
                             isRequired
                             onChange={(e) => setIdentifier(e.target.value)}
                         />
 
-                        <div className="password">
+                        <div className="login_password">
                             <InputField
                                 label="Password"
-                                name="passwordInput"
+                                name="login_password-input"
                                 type="password"
                                 isRequired
                                 onChange={(e) => setPassword(e.target.value)}
                             />
 
-                            <Link to="/resetPassword" id="link-forgot-password">Forgot your password?</Link>
+                            <Link to="/resetPassword" id="login_link-forgot-password">Forgot your password?</Link>
                         </div>
                     </div>
 
-                    <button id="loginBtn" onClick={handleLogin}>Login</button>
+                    <button id="login_btn" onClick={handleLogin}>Login</button>
 
-                    <p id="register">
+                    <p id="login_text-link">
                         Need an account?{" "}
-                        <Link to="/register" id="link-register">Register</Link>
+                        <Link to="/register" id="login_link-register">Register</Link>
                     </p>
                 </div>
             </form>

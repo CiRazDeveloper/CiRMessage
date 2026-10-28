@@ -2,7 +2,7 @@
     --link-size: 15px;
 }
 
-.main {
+.login_main {
     display: flex;
     flex-direction: column;
 
@@ -13,37 +13,37 @@
     align-items: center;
 }
 
-.form {
+.login_form {
     display: block;
     width: 40%;
 }
 
-.container {
+.login_container {
     display: flex;
     flex-direction: column;
 }
 
-.container h1 {
+.login_container h1 {
     color: var(--color-primary);
 
     width: fit-content;
     height: fit-content;
 }
 
-.inputs {
+.login_inputs {
     display: flex;
     flex-direction: column;
 
     padding-bottom: var(--element-space);
 }
 
-#link-forgot-password {
+#login_link-forgot-password {
     color: var(--color-primary);
 
     font-size: var(--link-size);
 }
 
-#loginBtn {
+#login_btn {
     background-color: var(--color-primary);
 
     width: 100%;
@@ -57,12 +57,12 @@
     font-weight: bold;
 }
 
-#register {
+#login_text-link {
     font-size: var(--link-size);
 
     margin: 0px;
 }
 
-#register #link-register {
+#login_text-link #login_link-register {
     color: var(--color-primary);
 }

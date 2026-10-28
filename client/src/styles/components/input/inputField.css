@@ -28,7 +28,7 @@
 
     border-width: 0.1px;
     border-radius: 5px;
-    border-color: var(--color-border-input);
+    border-color: var(--color-border);
 
     font-size: auto;
 }
