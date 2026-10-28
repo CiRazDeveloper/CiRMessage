@@ -5,15 +5,12 @@ function Home() {
     return (
         <div className="home-main">
             <div className="home-group">
-                Group
             </div>
 
             <div className="home-sidebar">
-                Sidebar
             </div>
 
             <div className="home-view">
-                View
             </div>
         </div>
     );
