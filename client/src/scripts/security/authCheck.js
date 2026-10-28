@@ -7,9 +7,9 @@ import {
 
 export const checkAuth = async () => {
     try {
-        const response = await axiosInstance.get("/auth/check");
+        // const response = await axiosInstance.get("/auth/check");
 
-        saveUser(response.data);
+        // saveUser(response.data);
 
         return true;
     } catch (error) {

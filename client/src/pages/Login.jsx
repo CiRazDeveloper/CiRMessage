@@ -22,26 +22,24 @@ function Login() {
         event.preventDefault();
 
         try {
-            const response = await axiosInstance.post("/auth/login", {
-                identifier,
-                password
-            });
+            navigate("/home");
 
-            console.log(response.data);
+            // const response = await axiosInstance.post("/auth/login", {
+            //     identifier,
+            //     password
+            // });
 
-            if (response.status === 200) {
-                saveUser(response.data.user);
-                // showNotification("Login successful", "success", { dismiss: "automatic",});
-                navigate("/home");
-            }
+            // console.log(response.data);
+
+            // if (response.status === 200) {
+            //     saveUser(response.data.user);
+            //     // showNotification("Login successful", "success", { dismiss: "automatic",});
+            //     navigate("/home");
+            // }
 
         } catch (error) {
             console.error("Login failed:", error);
-            // showNotification(
-            //     error.response?.data?.message ||
-            //         "Could not log in",
-            //     "error"
-            // );
+            // showNotification(error.response?.data?.message || "Could not log in", "error");
         }
     }
 
@@ -68,7 +66,7 @@ function Login() {
                                 onChange={(e) => setPassword(e.target.value)}
                             />
 
-                            <Link to="/signup" id="link-forgot-password">Forgot your password?</Link>
+                            <Link to="/resetPassword" id="link-forgot-password">Forgot your password?</Link>
                         </div>
                     </div>
 

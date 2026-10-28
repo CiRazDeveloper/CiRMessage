@@ -37,6 +37,10 @@
     padding-bottom: var(--element-space);
 }
 
+#secretInput::placeholder {
+    font-style:italic;
+}
+
 #registerBtn {
     background-color: var(--color-primary);
     

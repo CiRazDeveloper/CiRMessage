@@ -5,27 +5,6 @@ import mod_user from "../model/mod_user.js";
 
 import { STATUS_CODES } from "../utility/status_codes.js";
 
-export const protectRoute = async (req, res, nextFunc) => {
-    try {
-        const token = checkToken(req, res);
-        if (!token) return;
-
-        const decoded = verifyToken(token);
-
-        const user = await findUser(decoded.userId, res);
-        if (!user) return;
-
-        req.user = user;
-        nextFunc();
-    } catch (error) {
-        console.log("Error in auth middleware: ", error);
-
-        return res
-            .status(STATUS_CODES.ERROR.SERVER_INTERNAL_ERROR)
-            .json({ message: "Internal server error" });
-    }
-};
-
 const checkToken = (req, res) => {
     const token = req.cookies?.jwt;
 
@@ -58,4 +37,25 @@ const findUser = async (userId, res) => {
     }
 
     return user;
+};
+
+export const protectRoute = async (req, res, nextFunc) => {
+    try {
+        const token = checkToken(req, res);
+        if (!token) return;
+
+        const decoded = verifyToken(token);
+
+        const user = await findUser(decoded.userId, res);
+        if (!user) return;
+
+        req.user = user;
+        nextFunc();
+    } catch (error) {
+        console.log("Error in auth middleware: ", error);
+
+        return res
+            .status(STATUS_CODES.ERROR.SERVER_INTERNAL_ERROR)
+            .json({ message: "Internal server error" });
+    }
 };

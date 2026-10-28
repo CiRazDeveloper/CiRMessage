@@ -82,7 +82,7 @@ async function checkPassword(password) {
     return null;
 }
 
-export const signup = async (req, res) => {
+export const register = async (req, res) => {
     let { displayName, username, email, secret, password } = req.body;
 
     try {
