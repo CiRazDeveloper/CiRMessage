@@ -1,4 +1,4 @@
-.home-main {
+.home_main {
     display: flex;
     flex-direction: row;
     
@@ -8,17 +8,21 @@
     gap: 3px;
 }
 
-.home-group {
+.home_group {
     background-color: aqua;
     
+    display: flex;
+    flex-direction: column;
     flex-basis: 80px;
     flex-grow: 0;
     flex-shrink: 0;
 
     border-radius: 10px;
+
+    align-items: center;
 }
 
-.home-sidebar {
+.home_sidebar {
     background-color: chartreuse;
     
     flex-basis: 300px;
@@ -28,7 +32,7 @@
     border-radius: 10px;
 }
 
-.home-view {
+.home_view {
     background-color: orange;
 
     flex-basis: 0%;

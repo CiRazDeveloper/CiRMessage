@@ -1,4 +1,4 @@
-.inputField {
+.input-field_main {
     display: flex;
     flex-direction: column;
 
@@ -6,20 +6,20 @@
     gap: 5px;
 }
 
-.inputField label {
+.input-field_main label {
     font-family: var(--font-primary);
     font-size: auto;
 }
 
-.inputField label span {
+.input-field_main label span {
     color: var(--color-text-critical);
 }
 
-.inputWrapper {
+.input-field_wrapper {
     display: flex;
 }
 
-.inputWrapper input {
+.input-field_wrapper input {
     background-color: var(--color-background-input);
     color: var(--color-text);
 

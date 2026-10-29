@@ -10,16 +10,15 @@ function InputField({label = "", placeholder = "", isRequired = false, type = "t
     const inputType = type === "password" && isVisible ? "text" : type;
 
     return (
-        <div className="inputField">
-            <label htmlFor={name}>
+        <div className="input-field_main">
+            <label>
                 {label}{" "}
                 {isRequired && <span className="required">*</span>}
             </label>
 
-            <div className="inputWrapper">
+            <div className="input-field_wrapper">
                 <input
-                    id={name}
-                    name={name}
+                    id=""
                     placeholder={placeholder}
                     type={inputType}
                     required={isRequired}

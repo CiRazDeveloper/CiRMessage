@@ -8,6 +8,7 @@ function ShowInput({ isVisible, onToggle }) {
     return (
         <button
             type="button"
+            id="show-input_btn"
             onClick={onToggle}
             aria-label={isVisible ? "Hide password" : "Show password"}
             title={isVisible ? "Hide password" : "Show password"}

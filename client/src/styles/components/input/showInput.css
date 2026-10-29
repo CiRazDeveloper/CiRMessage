@@ -2,7 +2,7 @@
     --img-width: calc(var(--element-height) - 25px);
 }
 
-button {
+#show-input_btn {
     background-color: var(--color-primary);
     border-color: var(--color-border);
     
@@ -13,7 +13,7 @@ button {
     border-radius: 5px;
 }
     
-img {
+#show-input_btn img {
     width: calc(var(--img-width) + 10px);
     height: var(--img-width);
     object-fit: scale-down;

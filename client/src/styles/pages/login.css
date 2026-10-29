@@ -49,8 +49,8 @@
     width: 100%;
     height: var(--element-height);
 
-    border-width: 1px;
     border-radius: 5px;
+    border-width: 0px;
 
     font-size: var(--text-size-btn);
     font-family: var(--font-primary);
