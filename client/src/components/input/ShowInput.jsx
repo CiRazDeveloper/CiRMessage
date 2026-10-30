@@ -1,4 +1,3 @@
-import "./../../styles/general.css";
 import "./../../styles/components/input/showInput.css";
 
 import eyeOpen from "./../../assets/eyeOpen.svg";

@@ -1,0 +1,60 @@
+.scrollbar-root {
+    position: relative;
+    overflow: hidden;
+}
+
+/* The real scroller: scrolls normally, but its native bar is hidden */
+.scrollbar-viewport {
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* old Edge */
+}
+
+.scrollbar-viewport::-webkit-scrollbar {
+    display: none; /* Chrome, Edge, Safari */
+}
+
+.scrollbar-content {
+    min-height: 100%;
+}
+
+/* Custom bar (no buttons, by construction) */
+.scrollbar-track {
+    background: transparent;
+
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    
+    width: 12px;
+    z-index: 10;
+
+    opacity: 0;
+    transition: opacity 0.25s;
+}
+
+.scrollbar-thumb {
+    position: absolute;
+    top: 0;
+    left: 2px;
+    right: 2px;
+    border-radius: 10px;
+    background: #1a1b1e;
+    touch-action: none;
+    cursor: pointer;
+    transition: background-color 0.15s;
+}
+
+.scrollbar-track:hover,
+.scrollbar-scrolling > .scrollbar-track,
+.scrollbar-dragging > .scrollbar-track {
+    opacity: 1;
+}
+
+.scrollbar-thumb:hover,
+.scrollbar-dragging > .scrollbar-track .scrollbar-thumb {
+    background: #292b2f;
+}

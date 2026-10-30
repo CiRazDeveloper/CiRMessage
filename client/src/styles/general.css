@@ -14,3 +14,13 @@
     --element-height: 40px;
     --text-size-btn: 20px;
 }
+
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+html, body, #root {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+}

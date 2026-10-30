@@ -1,4 +1,3 @@
-import "../styles/general.css";
 import "../styles/pages/login.css";
 
 import InputField from "../components/input/InputField.jsx"

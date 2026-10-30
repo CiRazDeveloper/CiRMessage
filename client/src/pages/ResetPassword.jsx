@@ -1,4 +1,3 @@
-import "../styles/general.css";
 import "../styles/pages/resetPassword.css";
 
 import InputField from "../components/input/InputField.jsx"

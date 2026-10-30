@@ -8,6 +8,11 @@
     gap: 3px;
 }
 
+.home_group_scroll {
+    height: 100%;
+    min-height: 0;
+}
+
 .home_group {
     background-color: aqua;
     

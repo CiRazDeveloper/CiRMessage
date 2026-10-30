@@ -18,7 +18,6 @@ function InputField({label = "", placeholder = "", isRequired = false, type = "t
 
             <div className="input-field_wrapper">
                 <input
-                    id=""
                     placeholder={placeholder}
                     type={inputType}
                     required={isRequired}

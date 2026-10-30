@@ -1,4 +1,3 @@
-import "./../../styles/general.css";
 import "./../../styles/components/group/showGroup.css";
 
 function GroupButton({ onToggle, img }) {
